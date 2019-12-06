@@ -151,24 +151,67 @@ class Route
     }
     boolean check_c()
     {
+        return get_c_value() == 0;
+    }
+    boolean check_t()
+    {
+
+    }
+
+    double get_c_value() // the vialation of capacity
+    {
         double c_capacity = 0;
         for(int i:c_list)
         {
             c_capacity += Conf.customers[i].demand;
         }
-        return c_capacity < Conf.Q;
+        if (c_capacity - Conf.Q >= 0)
+            return 0;
+        else
+            return Conf.Q - c_capacity;
     }
-    boolean check_t()
+    double get_t_value() // the valation of time
     {
-        double fuel = 0;
-        double time = 0;
-
-
+            double a[] = new double[c_list.size()];
+            a[0] = Conf.customers[0].r_time;
+            for(int i=1;i<c_list.size();i++)
+            {
+                a[i] = get_t_a(i,a);
+            }
+            double sum = 0;
+            for(int i=0;i<c_list.size();i++)
+            {
+                sum += Math.max(0,a[i]);
+            }
+            return sum;
 
     }
-    double get_dis()
+    double get_t_a(int i, double [] a )//按照c_list 里来
+    {
+
+            double a1 = 0;
+            a1 = a[0] + Conf.customers[c_list.get(i-1)].s_time+Conf.dis_m[c_list.get(i-1)][c_list.get(i)];
+            if(a1 <= Conf.customers[c_list.get(i)].d_time)
+                return Math.max(a1,Conf.customers[c_list.get(i)].r_time);
+            else
+                return Conf.customers[c_list.get(i)].d_time;
+    }
+
+
+
+    double get_v_value()
+    {
+
+    }
+    double get_dis() // return the dis
     {
         this.dis = 0;
+        this.dis += Conf.dis_m[0][c_list.get(0)];
+        for(int i=0;i<this.c_list.size()-1;i++)
+        {
+            this.dis += Conf.dis_m[c_list.get(i)][c_list.get(i+1)];
+        }
+        this.dis += Conf.dis_m[c_list.get(c_list.size()-1)][0];
         return this.dis;
     }
 
@@ -200,8 +243,12 @@ class Solution
 }
 class Algorithm
 {
-    Solution get_ini_solution() // 获得初始解，使用最优插入算法
+    Solution get_ini_solution_NNH() // 获得初始解，使用最优插入算法
     {
+        Solution ini_solution = new Solution();
+
+
+
 
     }
 }
