@@ -191,7 +191,7 @@ class Route
             double sum = 0;
             for(int i=0;i<c_list.size();i++)
             {
-                sum += Math.max(0,a[i]);
+                sum += Math.max(0,a[i]-Conf.customers[c_list.get(i)].d_time);
             }
             return sum;
 
@@ -209,8 +209,8 @@ class Route
 
     double get_v_value()// 电量约束
     {
-        double a_forward[] = new double[c_list.size()+1];
-        double a_backward[] = new double[c_list.size()+1];
+        double []a_forward = new double[c_list.size()+1];
+        double []a_backward = new double[c_list.size()+1];
         for(int i=0;i<=c_list.size();i++)
         {
             a_forward[i] = get_v_forward(i,a_forward);
@@ -318,7 +318,6 @@ class Solution
 }
 class Algorithm
 {
-
     Solution get_ini_solution_NNH() // 获得初始解，使用最优插入算法
     {
         Solution ini_solution = new Solution();
