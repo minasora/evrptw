@@ -103,6 +103,7 @@ public class Conf {
         initialize();
         ArrayList<Integer> c = new ArrayList<>();
         c.add(5);
+        c.add(2);
         c.add(4);
         Route test_route = new Route(c);
         test_route.print();
@@ -208,9 +209,9 @@ class Route
 
     double get_v_value()// 电量约束
     {
-        double a_forward[] = new double[c_list.size()];
-        double a_backward[] = new double[c_list.size()];
-        for(int i=0;i<c_list.size();i++)
+        double a_forward[] = new double[c_list.size()+1];
+        double a_backward[] = new double[c_list.size()+1];
+        for(int i=0;i<=c_list.size();i++)
         {
             a_forward[i] = get_v_forward(i,a_forward);
         }
@@ -219,7 +220,8 @@ class Route
             a_backward[i] = get_v_backward(i, a_backward);
         }
         double ans = 0;
-        for(int i=0;i<c_list.size()-1;i++)
+        ;
+        for(int i=0;i<=c_list.size();i++)
         {
             ans += Math.max(0,a_forward[i]-Conf.Q);
         }
@@ -237,8 +239,13 @@ class Route
         }
         else
         {
-            return a_forward[i-1] + Conf.r * Conf.dis_m[c_list.get(i)][c_list.get(i-1)];
+            if(i==c_list.size())
+                return a_forward[i-1] + Conf.r*Conf.dis_m[c_list.get(i-1)][0];
+            else
+                return a_forward[i-1] + Conf.r * Conf.dis_m[c_list.get(i)][c_list.get(i-1)];
+
         }
+
     }
     double get_v_backward(int i, double [] a_backward)
     {
@@ -272,7 +279,7 @@ class Route
         System.out.print("depot-");
         for(Integer c:c_list)
         {
-            System.out.print(Conf.customers[c].Type+"-");
+            System.out.print(Conf.customers[c].id+"-");
         }
         System.out.print("depot");
         System.out.println();
@@ -280,6 +287,7 @@ class Route
         System.out.println("该route的容量惩罚值为"+this.get_c_value());
         System.out.println("该route的时间惩罚值为"+this.get_t_value());
         System.out.println("该route的电量惩罚值为"+this.get_v_value());
+
     }
 
 }
