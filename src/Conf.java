@@ -4,6 +4,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.zip.CheckedOutputStream;
 
 public class Conf {
     static int c_N=100;// the number of customers
@@ -14,7 +15,7 @@ public class Conf {
     static double r;// fuel consumption rate
     static double g;// inverse refueling rate
     static double v;// average Velocity
-    static Customer customers[] = new Customer[c_N+1];
+    static Customer customers[] = new Customer[c_N+1+q_N];
     static Customer chargestations[] = new Customer[q_N];
     static Q_best q_bests[];
     static void input(String file_name) throws FileNotFoundException
@@ -46,6 +47,8 @@ public class Conf {
             s_time = cin.nextDouble();
             if (Type.equals("f")) {
                 chargestations[j] = new Customer(ID, Type, x, y, r_time, s_time, d_time, demand);
+                customers[i] = chargestations[j];
+                i++;
                 j++;
             } else {
                 customers[i] = new Customer(ID, Type, x, y, r_time, s_time, d_time, demand);
@@ -147,16 +150,14 @@ class Route
     ArrayList<Integer> c_list = new ArrayList<>();// the customers list of vehicle
     boolean check()//check the feasible of the route
     {
-        return check_c()&& check_t();
+        return check_c() && check_t() && check_p();
     }
     boolean check_c()
     {
         return get_c_value() == 0;
     }
-    boolean check_t()
-    {
-
-    }
+    boolean check_t() { return get_t_value() == 0; }
+    boolean check_p() {  return get_v_value() == 0; }
 
     double get_c_value() // the vialation of capacity
     {
@@ -186,7 +187,7 @@ class Route
             return sum;
 
     }
-    double get_t_a(int i, double [] a )//按照c_list 里来
+    double get_t_a(int i, double [] a )//按照c_list 里来,递归为其赋值
     {
 
             double a1 = 0;
@@ -199,9 +200,54 @@ class Route
 
 
 
-    double get_v_value()
+    double get_v_value()// 电量约束
     {
-
+        double a_forward[] = new double[c_list.size()];
+        double a_backward[] = new double[c_list.size()];
+        for(int i=0;i<c_list.size();i++)
+        {
+            a_forward[i] = get_v_forward(i,a_forward);
+        }
+        for (int i=c_list.size()-1;i>=0;i--)
+        {
+            a_backward[i] = get_v_backward(i, a_backward);
+        }
+        double ans = 0;
+        for(int i=0;i<c_list.size()-1;i++)
+        {
+            ans += Math.max(0,a_forward[i]-Conf.Q);
+        }
+        return ans;
+    }
+    double get_v_forward(int i, double [] a_forward)
+    {
+        if (i == 0)
+        {
+            return Conf.r * Conf.dis_m[c_list.get(i)][0];
+        }
+        else if (Conf.customers[c_list.get(i-1)].Type.equals("f"))
+        {
+            return Conf.r * Conf.dis_m[c_list.get(i)][c_list.get(i-1)];
+        }
+        else
+        {
+            return a_forward[i-1] + Conf.r * Conf.dis_m[c_list.get(i)][c_list.get(i-1)];
+        }
+    }
+    double get_v_backward(int i, double [] a_backward)
+    {
+        if(i == c_list.size()-1)
+        {
+            return Conf.r * Conf.dis_m[c_list.get(i)][0];
+        }
+        else if (Conf.customers[c_list.get(i+1)].Type.equals("f"))
+        {
+            return Conf.r * Conf.dis_m[c_list.get(i)][c_list.get(i+1)];
+        }
+        else
+        {
+            return a_backward[i+1] + Conf.r * Conf.dis_m[c_list.get(i)][c_list.get(i-1)];
+        }
     }
     double get_dis() // return the dis
     {
