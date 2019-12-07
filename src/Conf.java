@@ -46,12 +46,12 @@ public class Conf {
             d_time = cin.nextDouble();
             s_time = cin.nextDouble();
             if (Type.equals("f")) {
-                chargestations[j] = new Customer(ID, Type, x, y, r_time, s_time, d_time, demand);
+                chargestations[j] = new Customer(Type,ID, x, y, r_time, s_time, d_time, demand);
                 customers[i] = chargestations[j];
                 i++;
                 j++;
             } else {
-                customers[i] = new Customer(ID, Type, x, y, r_time, s_time, d_time, demand);
+                customers[i] = new Customer(Type, ID ,  x, y, r_time, s_time, d_time, demand);
                 i++;
             }
         }
@@ -98,12 +98,16 @@ public class Conf {
         }
         catch(IOException e)
         {
+            e.printStackTrace();
         }
-        for(Customer c:customers)
-        {
-            if(c!=null)
-                c.print();
-        }
+        initialize();
+        ArrayList<Integer> c = new ArrayList<>();
+        c.add(5);
+        c.add(4);
+        Route test_route = new Route(c);
+        test_route.print();
+
+
     }
 }
 class Customer // the Customers
@@ -145,9 +149,13 @@ class Customer // the Customers
 }
 class Route
 {
-    double capacity;
     double dis;
     ArrayList<Integer> c_list = new ArrayList<>();// the customers list of vehicle
+    Route(ArrayList<Integer> c_list)
+    {
+        this.c_list.addAll(c_list);
+        this.dis = this.get_dis();
+    }
     boolean check()//check the feasible of the route
     {
         return check_c() && check_t() && check_p();
@@ -166,10 +174,10 @@ class Route
         {
             c_capacity += Conf.customers[i].demand;
         }
-        if (c_capacity - Conf.Q >= 0)
+        if (c_capacity - Conf.Q <= 0)
             return 0;
         else
-            return Conf.Q - c_capacity;
+            return c_capacity - Conf.Q;
     }
     double get_t_value() // the valation of time
     {
@@ -198,8 +206,6 @@ class Route
                 return Conf.customers[c_list.get(i)].d_time;
     }
 
-
-
     double get_v_value()// 电量约束
     {
         double a_forward[] = new double[c_list.size()];
@@ -208,7 +214,7 @@ class Route
         {
             a_forward[i] = get_v_forward(i,a_forward);
         }
-        for (int i=c_list.size()-1;i>=0;i--)
+        for (int i=c_list.size()-1;i>0;i--)
         {
             a_backward[i] = get_v_backward(i, a_backward);
         }
@@ -260,6 +266,21 @@ class Route
         this.dis += Conf.dis_m[c_list.get(c_list.size()-1)][0];
         return this.dis;
     }
+    void print()
+    {
+        System.out.println("该路径为");
+        System.out.print("depot-");
+        for(Integer c:c_list)
+        {
+            System.out.print(Conf.customers[c].Type+"-");
+        }
+        System.out.print("depot");
+        System.out.println();
+        System.out.println("该route的路径长为"+dis);
+        System.out.println("该route的容量惩罚值为"+this.get_c_value());
+        System.out.println("该route的时间惩罚值为"+this.get_t_value());
+        System.out.println("该route的电量惩罚值为"+this.get_v_value());
+    }
 
 }
 
@@ -289,12 +310,10 @@ class Solution
 }
 class Algorithm
 {
+
     Solution get_ini_solution_NNH() // 获得初始解，使用最优插入算法
     {
         Solution ini_solution = new Solution();
-
-
-
-
+        return ini_solution;
     }
 }
