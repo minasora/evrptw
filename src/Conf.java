@@ -347,11 +347,28 @@ class Solution
     }
 
 }
+class AngelCustomer
+{
+    double angel;
+    Customer customer;
+    AngelCustomer(Customer customer)
+    {
+        this.customer = customer;
+    }
+    void set_angel(Customer order_customer)// 以指定点和原点作为轴计算角度
+    {
+
+    }
+
+}
 class Algorithm
 {
+
     Solution get_ini_solution_NNH() // 获得初始解，使用最优插入算法
     {
         Solution ini_solution = new Solution();
+
+        for(int i=Conf.c_N;i<= Conf.c_N+Conf.q_N;i++)
         return ini_solution;
     }
 }
