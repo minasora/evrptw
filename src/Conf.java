@@ -103,8 +103,10 @@ public class Conf {
         initialize();
         ArrayList<Integer> c = new ArrayList<>();
         c.add(5);
-        c.add(2);
+        c.add(6);
         c.add(4);
+        c.add(2);
+
         Route test_route = new Route(c);
         test_route.print();
 
@@ -182,29 +184,56 @@ class Route
     }
     double get_t_value() // the valation of time
     {
-            double a[] = new double[c_list.size()];
+            double a[] = new double[c_list.size()+1];
             a[0] = Conf.customers[0].r_time;
-            for(int i=1;i<c_list.size();i++)
-            {
-                a[i] = get_t_a(i,a);
-            }
             double sum = 0;
             for(int i=0;i<c_list.size();i++)
             {
-                sum += Math.max(0,a[i]-Conf.customers[c_list.get(i)].d_time);
+                //System.out.println(a[i]);
+                sum += get_t_a(i,a);
             }
+
             return sum;
 
     }
     double get_t_a(int i, double [] a )//按照c_list 里来,递归为其赋值
     {
 
+            double charge_time = 0;
+            if(i==0)
+            {
+                a[i] = Math.max(Conf.customers[c_list.get(0)].r_time,Conf.dis_m[c_list.get(0)][c_list.get(i)]);
+                return 0;
+            }
+            if(Conf.customers[c_list.get(i)].Type.equals("f")) // 充电站得特殊处理
+            {
+                double sum = 0;
+                for(int j = i;j>0;j--)
+                {
+                    sum += Conf.dis_m[c_list.get(j)][c_list.get(j-1)];
+                    if(Conf.customers[c_list.get(j)].Type.equals("f") ) // 找到了上一个充电站和depot
+                    {
+                        break;
+                    }
+                    if(sum > Conf.Q)
+                    {
+                        sum = Conf.Q;
+                    }
+                    charge_time = sum/Conf.g;
+                }
+
+            }
             double a1 = 0;
-            a1 = a[0] + Conf.customers[c_list.get(i-1)].s_time+Conf.dis_m[c_list.get(i-1)][c_list.get(i)];
+            double v = 0;
+            a1 = a[i-1] + Conf.customers[c_list.get(i-1)].s_time+Conf.dis_m[c_list.get(i-1)][c_list.get(i)] + charge_time;
             if(a1 <= Conf.customers[c_list.get(i)].d_time)
-                return Math.max(a1,Conf.customers[c_list.get(i)].r_time);
-            else
-                return Conf.customers[c_list.get(i)].d_time;
+                a[i] =  Math.max(a1,Conf.customers[c_list.get(i)].r_time);
+
+            else {
+                a[i] = Conf.customers[c_list.get(i)].d_time;
+                v = a1 - Conf.customers[c_list.get(i)].d_time;
+            }
+            return v;
     }
 
     double get_v_value()// 电量约束
@@ -220,7 +249,7 @@ class Route
             a_backward[i] = get_v_backward(i, a_backward);
         }
         double ans = 0;
-        ;
+
         for(int i=0;i<=c_list.size();i++)
         {
             ans += Math.max(0,a_forward[i]-Conf.Q);
@@ -235,6 +264,8 @@ class Route
         }
         else if (Conf.customers[c_list.get(i-1)].Type.equals("f"))
         {
+            if(i==c_list.size())
+                return Conf.r*Conf.dis_m[c_list.get(i-1)][0];
             return Conf.r * Conf.dis_m[c_list.get(i)][c_list.get(i-1)];
         }
         else
