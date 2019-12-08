@@ -350,15 +350,25 @@ class Solution
 class AngelCustomer
 {
     double angel;
+    int id;
     Customer customer;
-    AngelCustomer(Customer customer)
+    AngelCustomer(Customer customer,int id)
     {
+        this.id = id;
         this.customer = customer;
     }
-    void set_angel(Customer order_customer)// 以指定点和原点作为轴计算角度
+    void set_angel(AngelCustomer order_customer)// 以指定点和原点作为轴计算角度
     {
-
+        double l1 = Conf.dis_m[this.id][0];
+        double l2 = Conf.dis_m[0][order_customer.id];
+        double l3 = Conf.dis_m[this.id][order_customer.id];
+        this.angel = (l1 * l1 + l2 * l2 - l3 * l3) / (2 * l1 * l2);
     }
+    boolean cmp(AngelCustomer other)
+    {
+        return this.angel > other.angel;
+    }
+
 
 }
 class Algorithm
