@@ -1,8 +1,11 @@
+import javax.sound.midi.Soundbank;
 import java.awt.desktop.SystemSleepEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.zip.CheckedOutputStream;
 
@@ -94,22 +97,16 @@ public class Conf {
     {
         try
         {
-            input("c101C5.txt");
+            input("c101_21.txt");
         }
         catch(IOException e)
         {
             e.printStackTrace();
         }
         initialize();
-        ArrayList<Integer> c = new ArrayList<>();
-        c.add(5);
-        c.add(6);
-        c.add(4);
-        c.add(2);
-
-        Route test_route = new Route(c);
-        test_route.print();
-
+        Algorithm al = new Algorithm();
+        Solution solution = al.get_ini_solution_NNH();
+        solution.print();
 
     }
 }
@@ -159,6 +156,33 @@ class Route
         this.c_list.addAll(c_list);
         this.dis = this.get_dis();
     }
+    Route()
+    {
+
+    }
+    int best_insert_pos(int c)// only think about dis;
+    {
+        int i = -1;
+        double ans = 10000;
+        for(int j=0; j<c_list.size()+1;j++)
+        {
+            double old_dis = this.dis;
+            this.c_list.add(j,c);
+            if(this.check())
+            {
+               double  res = this.get_dis() - old_dis;
+               if (res < ans)
+               {
+                   i = j;
+                   ans = res;
+               }
+
+            }
+            this.c_list.remove(Integer.valueOf(c));
+        }
+        return i;
+
+}
     boolean check()//check the feasible of the route
     {
         return check_c() && check_t() && check_p();
@@ -172,6 +196,7 @@ class Route
 
     double get_c_value() // the vialation of capacity
     {
+        if(this.c_list.size()==0)return 0;
         double c_capacity = 0;
         for(int i:c_list)
         {
@@ -184,6 +209,7 @@ class Route
     }
     double get_t_value() // the valation of time
     {
+            if(this.c_list.size()==0)return 0;
             double a[] = new double[c_list.size()+1];
             a[0] = Conf.customers[0].r_time;
             double sum = 0;
@@ -238,6 +264,7 @@ class Route
 
     double get_v_value()// 电量约束
     {
+        if(this.c_list.size()==0)return 0;
         double []a_forward = new double[c_list.size()+1];
         double []a_backward = new double[c_list.size()+1];
         for(int i=0;i<=c_list.size();i++)
@@ -296,6 +323,7 @@ class Route
     double get_dis() // return the dis
     {
         this.dis = 0;
+        if(this.c_list.size()==0)return this.dis;
         this.dis += Conf.dis_m[0][c_list.get(0)];
         for(int i=0;i<this.c_list.size()-1;i++)
         {
@@ -303,6 +331,13 @@ class Route
         }
         this.dis += Conf.dis_m[c_list.get(c_list.size()-1)][0];
         return this.dis;
+    }
+    Route deepcopy()
+    {
+        Route new_route = new Route();
+        new_route.c_list.addAll(this.c_list);
+        new_route.get_dis();
+        return new_route;
     }
     void print()
     {
@@ -335,7 +370,10 @@ class Q_best // every customer has a best Q,when run ,if can't arrive next custo
 class Solution
 {
     ArrayList<Route> r_list = new ArrayList<>();
+    ArrayList<Integer> relaxed_clist =  new ArrayList<>();
+    ArrayList<Integer> unrelaxed_clist = new ArrayList<>();
     double dis;
+    double fitness;
     boolean check()
     {
         for (Route r:r_list)
@@ -345,9 +383,63 @@ class Solution
         }
         return true;
     }
+    void set_dis()
+    {
+        this.dis = 0;
+        for(Route r: this.r_list)
+            this.dis += r.dis;
+    }
+    void set_fitness()
+    {
+        this.fitness = 0;
+        for(Route r:this.r_list)
+        {
+            this.fitness += r.dis + r.get_v_value() + r.get_t_value() + r.get_c_value();
+        }
+    }
+    void print()
+    {
+        System.out.println("该解dis为"+this.dis);
+        for(Route r:r_list)
+        {
+            r.print();
+        }
+    }
+    Solution deepcopy()
+    {
+        Solution new_solution = new Solution();
+        new_solution.relaxed_clist.addAll(this.relaxed_clist);
+        new_solution.unrelaxed_clist.addAll(this.unrelaxed_clist);
+        for(Route a :this.r_list)
+        {
+            Route route = a.deepcopy();
+            this.r_list.add(route);
+        }
+        new_solution.dis = this.dis;
+        new_solution.fitness = this.fitness;
+        return new_solution;
+    }
+    void remove(int i)
+    {
+        int t = -1;
+        for(Route r:this.r_list)
+            for(int j:r.c_list)
+            {
+                if(i==j)
+                {
+                    r.c_list.remove(Integer.valueOf(i));
+                    this.set_dis();
+                    this.set_fitness();
+                    return;
+                }
 
+            }
+
+    }
 }
-class AngelCustomer
+
+
+class AngelCustomer implements Comparable<AngelCustomer>
 {
     double angel;
     int id;
@@ -359,26 +451,128 @@ class AngelCustomer
     }
     void set_angel(AngelCustomer order_customer)// 以指定点和原点作为轴计算角度
     {
+
         double l1 = Conf.dis_m[this.id][0];
         double l2 = Conf.dis_m[0][order_customer.id];
         double l3 = Conf.dis_m[this.id][order_customer.id];
         this.angel = (l1 * l1 + l2 * l2 - l3 * l3) / (2 * l1 * l2);
     }
-    boolean cmp(AngelCustomer other)
+    @Override
+    public int compareTo(AngelCustomer other)
     {
-        return this.angel > other.angel;
+        if (this.angel > other.angel)
+            return 1;
+        else return -1;
     }
 
 
 }
+class Pos // 决定插入位置
+{
+    int route_id;
+    int pos_i;
+    public Pos(int route_id, int pos_i) {
+        this.route_id = route_id;
+        this.pos_i = pos_i;
+    }
+}
+
 class Algorithm
 {
+    Pos find_best_Pos(Solution solution,int c)
+    {
+        int i= -1;
+        double ans = 10000;
+        int route_id = -1;
+        int result_i=-1;
+        for(int t=0;t<solution.r_list.size();t++)
+        {
+            Route cur = solution.r_list.get(t).deepcopy();
+            if(solution.r_list.get(t).best_insert_pos(c)!=-1) {
+                i = solution.r_list.get(t).best_insert_pos(c);
+                cur.c_list.add(i, c);
+                cur.get_dis();
+                if (ans > cur.dis - solution.r_list.get(t).dis) {
+                    ans = cur.dis - solution.r_list.get(t).dis;
+                    route_id = t;
+                    result_i = i;
+                }
+            }
+        }
+        if(result_i == -1)
+        {
+            return new Pos(-1,-1);
+        }
+        else
+            return new Pos(route_id,result_i);
 
+    }
+    int get_random_int(int i,int j)
+    {
+        Random r = new Random();
+        int ans =i + r.nextInt(j-i);
+        return ans;
+    }
+    ArrayList<AngelCustomer> get_sort_customers()
+    {
+        ArrayList<AngelCustomer> angelCustomers = new ArrayList<>();
+        for(int i=Conf.q_N+1 ;i < Conf.c_N;i++)
+        {
+            angelCustomers.add(new AngelCustomer(Conf.customers[i],i));
+        }
+        int order_id = get_random_int(0,angelCustomers.size());
+        for(int i=0;i<=angelCustomers.size()-1;i++)
+        {
+            angelCustomers.get(i).set_angel(angelCustomers.get(order_id));
+        }
+        Collections.sort(angelCustomers);
+        return angelCustomers;
+    }
     Solution get_ini_solution_NNH() // 获得初始解，使用最优插入算法
     {
         Solution ini_solution = new Solution();
+        ArrayList<AngelCustomer> sorted_customer = get_sort_customers();
 
-        for(int i=Conf.c_N;i<= Conf.c_N+Conf.q_N;i++)
-        return ini_solution;
+        Route route = new Route();
+        route.c_list.add(sorted_customer.get(0).id);
+        ini_solution.unrelaxed_clist.add(sorted_customer.get(0).id);
+        sorted_customer.remove(sorted_customer.get(0));
+        ini_solution.r_list.add(route.deepcopy());
+        route.c_list.clear();
+        for (AngelCustomer c : sorted_customer) {
+                Pos pos = find_best_Pos(ini_solution,c.id);
+                int i = pos.pos_i;
+                if (i == -1) {
+                    route.c_list.add(c.id);
+                    ini_solution.unrelaxed_clist.add(c.id);
+                    route.get_dis();
+                    ini_solution.r_list.add(route.deepcopy());
+                    route.c_list.clear();
+
+                } else {
+                    ini_solution.r_list.get(pos.route_id).c_list.add(pos.pos_i, c.id);
+                    ini_solution.unrelaxed_clist.add(c.id);
+                }
+            }
+
+            ini_solution.set_dis();
+            System.out.println(ini_solution.unrelaxed_clist.size());
+            return ini_solution;
+    }
+    Solution random_remove_customers(Solution solution)
+    {
+        int p = Conf.c_N/5;
+        while(solution.unrelaxed_clist.size()!=p)
+        {
+            int i  = get_random_int(0,solution.relaxed_clist.size());
+            solution.unrelaxed_clist.add(solution.relaxed_clist.get(i));
+            solution.relaxed_clist.remove(i);
+            solution.remove(i);
+        }
+        return solution;
+
     }
 }
+
+
+
