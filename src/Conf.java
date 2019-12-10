@@ -3,6 +3,7 @@ import java.awt.desktop.SystemSleepEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.rmi.activation.ActivationGroup_Stub;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
@@ -49,12 +50,12 @@ public class Conf {
             d_time = cin.nextDouble();
             s_time = cin.nextDouble();
             if (Type.equals("f")) {
-                chargestations[j] = new Customer(Type,ID, x, y, r_time, s_time, d_time, demand);
+                chargestations[j] = new Customer(j,Type,ID, x, y, r_time, s_time, d_time, demand);
                 customers[i] = chargestations[j];
                 i++;
                 j++;
             } else {
-                customers[i] = new Customer(Type, ID ,  x, y, r_time, s_time, d_time, demand);
+                customers[i] = new Customer(i,Type, ID ,  x, y, r_time, s_time, d_time, demand);
                 i++;
             }
         }
@@ -105,15 +106,40 @@ public class Conf {
         }
         initialize();
         Algorithm al = new Algorithm();
-        Solution solution = al.get_ini_solution_NNH();
+        Route route = new Route();
+        Solution solution = al.get_ini_solution_time();
         solution.print();
+        /*
+        Solution new_solution = solution.deepcopy();
+        for(int i=1;i<=100000;i++)
+        {
+            while(true) {
+                al.large_neigh_search(solution);
+                if(solution.relaxed_clist.size()==0)
+                    break;
+                else
+                {
+                    solution = new_solution.deepcopy();
+                }
+            }
+            if(solution.relaxed_clist.size()!=0 || solution.dis > new_solution.dis)
+                solution = new_solution.deepcopy();
+            else
+            {
+                new_solution = solution.deepcopy();
+            }
+            System.out.println(solution.dis);
+        }
+        solution.print();
+        */
 
     }
 }
-class Customer // the Customers
+class Customer implements Comparable<Customer>// the Customers
 {
     String Type;
     String id;
+    int num;
     double x;
     double y;
     double r_time;
@@ -121,7 +147,8 @@ class Customer // the Customers
     double d_time;
     double demand;
 
-    public Customer(String Type,String id, double x, double y, double r_time, double s_time, double d_time, double demand) {
+
+    public Customer(int num,String Type,String id, double x, double y, double r_time, double s_time, double d_time, double demand) {
         this.Type = Type;
         this.id = id;
         this.x = x;
@@ -130,6 +157,7 @@ class Customer // the Customers
         this.s_time = s_time;
         this.d_time = d_time;
         this.demand = demand;
+        this.num = num;
     }
     void print()
     {
@@ -145,6 +173,11 @@ class Customer // the Customers
     double get_distance(Customer other)
     {
         return Math.sqrt((this.x-other.x)*(this.x-other.x)+(this.y-other.y)*(this.y-other.y));
+    }
+    public int compareTo(Customer other){
+        if(this.r_time>other.r_time)return -1;
+        else return 1;
+
     }
 }
 class Route
@@ -166,6 +199,7 @@ class Route
         double ans = 10000;
         for(int j=0; j<c_list.size()+1;j++)
         {
+            this.get_dis();
             double old_dis = this.dis;
             this.c_list.add(j,c);
             if(this.check())
@@ -180,12 +214,13 @@ class Route
             }
             this.c_list.remove(Integer.valueOf(c));
         }
+        //if(this.c_list.size()==0)i = 0;
         return i;
 
 }
     boolean check()//check the feasible of the route
     {
-        return check_c() && check_t() && check_p();
+        return check_c() && check_t();
     }
     boolean check_c()
     {
@@ -386,8 +421,10 @@ class Solution
     void set_dis()
     {
         this.dis = 0;
-        for(Route r: this.r_list)
+        for(Route r: this.r_list) {
+            r.dis = r.get_dis();
             this.dis += r.dis;
+        }
     }
     void set_fitness()
     {
@@ -413,7 +450,7 @@ class Solution
         for(Route a :this.r_list)
         {
             Route route = a.deepcopy();
-            this.r_list.add(route);
+            new_solution.r_list.add(route);
         }
         new_solution.dis = this.dis;
         new_solution.fitness = this.fitness;
@@ -528,6 +565,46 @@ class Algorithm
         Collections.sort(angelCustomers);
         return angelCustomers;
     }
+    Solution get_ini_solution_time()
+    {
+        ArrayList<Customer> time_customers = new ArrayList<>();
+        for(int i = Conf.q_N+1;i<Conf.c_N;i++)
+        {
+            time_customers.add(Conf.customers[i]);
+        }
+        Collections.sort(time_customers);
+        boolean if_new_route = false;
+        Route route = new Route();
+        Solution solution = new Solution();
+        while(time_customers.size()!=0)
+        {
+            if(if_new_route)
+            {
+                solution.r_list.add(route);
+                route.c_list.clear();
+                route.get_dis();
+            }
+            if_new_route = true;
+            for(int i=0;i<time_customers.size();i++)
+            {
+                route.c_list.add(time_customers.get(i).num);
+                if(!route.check()) {
+                    route.c_list.remove(Integer.valueOf(time_customers.get(i).num));
+                }
+                    route.get_dis();
+                    time_customers.remove(i);
+                    if_new_route = false;
+                    break;
+
+            }
+        }
+        if(route.c_list.size()!=0)
+        {
+            solution.r_list.add(route);
+        }
+        return solution;
+
+    }
     Solution get_ini_solution_NNH() // 获得初始解，使用最优插入算法
     {
         Solution ini_solution = new Solution();
@@ -561,17 +638,70 @@ class Algorithm
     }
     Solution random_remove_customers(Solution solution)
     {
-        int p = Conf.c_N/5;
-        while(solution.unrelaxed_clist.size()!=p)
+        int p = 10 ;
+        while(solution.relaxed_clist.size()!=p)
         {
-            int i  = get_random_int(0,solution.relaxed_clist.size());
-            solution.unrelaxed_clist.add(solution.relaxed_clist.get(i));
-            solution.relaxed_clist.remove(i);
-            solution.remove(i);
+            int i  = get_random_int(0,solution.unrelaxed_clist.size());
+            solution.relaxed_clist.add(solution.unrelaxed_clist.get(i));
+            solution.remove(solution.unrelaxed_clist.get(i));
+            solution.unrelaxed_clist.remove(i);
+
         }
         return solution;
 
     }
+    Solution greedy_insert_customers(Solution solution) // 贪婪法重新插回
+    {
+           double ans = 10000;
+           int result_i=-1;
+           Pos result_pos = new Pos(-1,-1);
+           for(int i:solution.relaxed_clist)
+           {
+               double dis = solution.dis;
+
+               Pos pos  = find_best_Pos(solution,i);
+               if(pos.pos_i == -1)
+                   return solution;
+               solution.r_list.get(pos.route_id).c_list.add(pos.pos_i,i);
+               solution.set_dis();
+               if(ans >  solution.dis - dis)
+                   {
+                       result_i = i;
+                       result_pos = pos;
+                   }
+               solution.r_list.get(pos.route_id).c_list.remove(pos.pos_i);
+           }
+           solution.r_list.get(result_pos.route_id).c_list.add(result_pos.pos_i,result_i);
+           solution.unrelaxed_clist.add(result_i);
+           solution.relaxed_clist.remove(Integer.valueOf(result_i));
+           solution.set_dis();
+           return solution;
+    }
+   // Solution find_best_charge_station()
+  //  {
+
+   // }
+
+    Solution large_neigh_search(Solution solution)
+    {
+        double dis = solution.dis;
+        solution = random_remove_customers(solution);
+        solution.set_dis();
+        while(solution.relaxed_clist.size()!=0)
+        {
+            if(solution.dis>=dis)break;
+            solution.set_dis();
+            double old_dis = solution.dis;
+            solution = greedy_insert_customers(solution);
+            solution.set_dis();
+            if(solution.dis == old_dis) // 剪枝
+                break;
+        }
+        return solution;
+    }
+
+
+
 }
 
 
