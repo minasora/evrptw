@@ -95,7 +95,7 @@ public class Conf {
     {
         try
         {
-            input("c101_21.txt");
+            input("c101C10.txt");
         }
         catch(IOException e)
         {
@@ -107,10 +107,9 @@ public class Conf {
         Solution solution = al.get_ini_solution_time();
         solution.print();
         System.out.println(solution.size());
-        solution.r_list.get(0).c_list.add(9);
         System.out.println(solution.r_list.get(0).check());
         Solution new_solution = solution.deepcopy();
-        for(int i=1;i<=100000;i++)
+        for(int i=1;i<=100;i++)
         {
             while(true) {
                 al.large_neigh_search(solution);
@@ -650,7 +649,7 @@ class Algorithm {
         }
         Solution random_remove_customers (Solution solution)
         {
-            int p = 25;
+            int p = 10;
             while (solution.relaxed_clist.size() != p) {
                 int i = get_random_int(0, solution.unrelaxed_clist.size());
                 solution.relaxed_clist.add(solution.unrelaxed_clist.get(i));
