@@ -130,6 +130,7 @@ public class Conf {
         }
 
         solution = al.station_pair(solution);
+        solution.set_dis();
         solution.print();
 
 
@@ -436,7 +437,10 @@ class Route
         {
             if(this.v[i+1]<0)
             {
-                result_i = i;
+
+
+                result_i = i-1;
+
             }
         }
         while(true) {
@@ -462,7 +466,7 @@ class Route
         {
             dis = this.get_dis();
             this.c_list.add(i,Conf.customers[j].num);
-            if(this.check() && this.check_p(i+1))
+            if(this.check() && this.check_p(i+2))
             {
                 if(ans > this.get_dis() - dis)
                 {
