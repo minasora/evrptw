@@ -95,7 +95,7 @@ public class Conf {
     {
         try
         {
-            input("c101C10.txt");
+            input("c101C5.txt");
         }
         catch(IOException e)
         {
@@ -128,6 +128,19 @@ public class Conf {
             }
             System.out.println(solution.dis);
         }
+
+        Route test_route = new Route();
+        /*
+        test_route.c_list.add(5);
+        test_route.c_list.add(4);
+        test_route.c_list.add(6);
+        test_route.print();
+        */
+
+        solution = al.station_pair(solution);
+        solution.set_dis();
+        solution = al.station_pair(solution);
+        solution.set_dis();
         solution.print();
 
 
@@ -392,6 +405,65 @@ class Route
         System.out.println("该route的电量惩罚值为"+this.get_v_value());
 
     }
+    void find_best_station_insert()
+    {
+        Route r = new Route();
+        int  result_i = 0;
+        for(int i=0;i<this.c_list.size();i++)
+        {
+            r.c_list.add(c_list.get(i));
+            if(r.get_v_value()>0)
+            {
+                result_i = i;
+                break;
+            }
+        }
+        int t = find_best_station(result_i,r);
+        this.c_list.add(result_i,t);
+
+    }
+
+    int find_best_station(int i,Route r)
+    {
+        int result = -1;
+        double ans = 1000;
+        for(int j=1;j<=Conf.q_N;j++)
+        {
+            dis = this.get_dis();
+            this.c_list.add(i,Conf.customers[j].num);
+            if(this.check() && r.get_part_v_value()==0 )
+            {
+                if(ans > this.get_dis() - dis)
+                {
+                    result = Conf.customers[j].num;
+                }
+            }
+            this.c_list.remove(Integer.valueOf(Conf.customers[j].num));
+            r.c_list.remove(Integer.valueOf(Conf.customers[j].num));
+        }
+        return result;
+    }
+    double get_part_v_value()// 电量约束
+    {
+        if(this.c_list.size()==0)return 0;
+        double []a_forward = new double[c_list.size()+1];
+        double []a_backward = new double[c_list.size()+1];
+        for(int i=0;i<c_list.size();i++)
+        {
+            a_forward[i] = get_v_forward(i,a_forward);
+        }
+        for (int i=c_list.size()-1;i>0;i--)
+        {
+            a_backward[i] = get_v_backward(i, a_backward);
+        }
+        double ans = 0;
+
+        for(int i=0;i<c_list.size();i++)
+        {
+            ans += Math.max(0,a_forward[i]-Conf.Q);
+        }
+        return ans;
+    }
 
 }
 
@@ -649,7 +721,7 @@ class Algorithm {
         }
         Solution random_remove_customers (Solution solution)
         {
-            int p = 10;
+            int p = 2;
             while (solution.relaxed_clist.size() != p) {
                 int i = get_random_int(0, solution.unrelaxed_clist.size());
                 solution.relaxed_clist.add(solution.unrelaxed_clist.get(i));
@@ -708,6 +780,18 @@ class Algorithm {
         }
 
 
+
+        Solution station_pair(Solution solution) // 满足电量约束//修复不可行解
+        {
+            for(Route r :solution.r_list)
+            {
+
+                    r.find_best_station_insert();
+                    r.print();
+
+            }
+            return solution;
+        }
     }
 
 
