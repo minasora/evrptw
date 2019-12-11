@@ -95,7 +95,7 @@ public class Conf {
     {
         try
         {
-            input("c101C5.txt");
+            input("c102_21.txt");
         }
         catch(IOException e)
         {
@@ -109,7 +109,7 @@ public class Conf {
         System.out.println(solution.size());
         System.out.println(solution.r_list.get(0).check());
         Solution new_solution = solution.deepcopy();
-        for(int i=1;i<=100;i++)
+        for(int i=1;i<=1000;i++)
         {
             while(true) {
                 al.large_neigh_search(solution);
@@ -132,8 +132,7 @@ public class Conf {
         solution = al.station_pair(solution);
         solution.set_dis();
         solution.print();
-        for(int i=0;i<=solution.r_list.get(1).c_list.size();i++)
-            System.out.print(solution.r_list.get(1).v[i]+" ");
+
 
 
 
@@ -263,9 +262,6 @@ class Route
                 }
             }
         v[j+1] = v[j] - Conf.dis_m[this.c_list.get(this.c_list.size()-1)][0];
-        if(Conf.customers[this.c_list.get(this.c_list.size()-1)].Type.equals("f")) {
-            v[j+1] = Conf.Q;
-        }
         if(v[j+1]<0)
             return false;
 
@@ -477,7 +473,7 @@ class Route
                     result = Conf.customers[j].num;
                 }
             }
-            this.c_list.remove(Integer.valueOf(Conf.customers[j].num));
+            this.c_list.remove(i);
         }
         return result;
     }
@@ -530,6 +526,7 @@ class Solution
     }
     void print()
     {
+        this.set_dis();
         System.out.println("该解dis为"+this.dis);
         for(Route r:r_list)
         {
@@ -740,7 +737,7 @@ class Algorithm {
         }
         Solution random_remove_customers (Solution solution)
         {
-            int p = 2;
+            int p = 10;
             while (solution.relaxed_clist.size() != p) {
                 int i = get_random_int(0, solution.unrelaxed_clist.size());
                 solution.relaxed_clist.add(solution.unrelaxed_clist.get(i));
@@ -807,7 +804,8 @@ class Algorithm {
                 boolean flag = r.check_p(r.c_list.size());
                     while(!flag) {
                         r.find_best_station_insert();
-                        r.print();
+                        //r.print();
+
                         flag = r.check_p(r.c_list.size());
                     }
             }
