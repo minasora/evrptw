@@ -129,22 +129,12 @@ public class Conf {
             System.out.println(solution.dis);
         }
 
-        Route test_route = new Route();
-        /*
-        test_route.c_list.add(5);
-        test_route.c_list.add(4);
-        test_route.c_list.add(6);
-        test_route.print();
-        */
         solution = al.station_pair(solution);
-        solution.set_dis();
         solution.print();
-        solution = al.station_pair(solution);
-        solution.set_dis();
-        solution.print();
-        solution = al.station_pair(solution);
-        solution.set_dis();
-        solution.print();
+
+
+
+
 
 
     }
@@ -198,6 +188,7 @@ class Route
 {
     double dis;
     ArrayList<Integer> c_list = new ArrayList<>();// the customers list of vehicle
+    double [] v;
     Route(ArrayList<Integer> c_list)
     {
         this.c_list.addAll(c_list);
@@ -245,7 +236,36 @@ class Route
         return get_c_value() == 0;
     }
     boolean check_t() { return get_t_value() == 0; }
-    boolean check_p() {  return get_v_value() == 0; }
+    boolean check_p(int j) {
+        v = new double[j+2];
+        v[0] = Conf.Q;
+        for(int i=1;i<=j+1;i++)
+        {
+            v[i] = -1;
+        }
+        for(int i=1;i<=j;i++) {
+
+                if (i == 1) {
+                    v[i] = v[0] - Conf.dis_m[0][this.c_list.get(i - 1)];
+                }
+                else
+                {
+                    v[i] = v[i-1] - Conf.dis_m[this.c_list.get(i-1)][this.c_list.get(i-2)];
+                }
+            if (v[i] < 0) {
+                return false;
+            }
+            if(Conf.customers[this.c_list.get(i-1)].Type.equals("f")) {
+                    v[i] = Conf.Q;
+                }
+            }
+        v[j+1] = v[j] - Conf.dis_m[this.c_list.get(this.c_list.size()-1)][0];
+        if(v[j+1]<0)
+            return false;
+
+        return true;
+
+    }
 
     double get_c_value() // the vialation of capacity
     {
@@ -410,29 +430,31 @@ class Route
     }
     void find_best_station_insert()
     {
-        Route r = new Route();
-        int  result_i = 0;
-        for(int i=0;i<this.c_list.size();i++)
+        int result_i = 0;
+        this.check_p(this.c_list.size());
+        for(int i=0;i<this.c_list.size()+1;i++)
         {
-            r.c_list.add(c_list.get(i));
-            if(r.get_v_value()>0)
+            if(this.v[i+1]<0)
             {
                 result_i = i;
-                break;
             }
         }
-        for(int j = result_i;j>=0;j--) {
-            int t = find_best_station(j, r);
-            if(t!=-1)
+        while(true) {
+            int t = find_best_station(result_i);
+            if (t == -1)
             {
-                this.c_list.add(j,t);
+                result_i --;
+            }
+            else
+            {
+                this.c_list.add(result_i, t);
                 break;
             }
-            r.c_list.remove(r.c_list.size()-1);
         }
+
     }
 
-    int find_best_station(int i,Route r)
+    int find_best_station(int i)
     {
         int result = -1;
         double ans = 1000;
@@ -440,7 +462,7 @@ class Route
         {
             dis = this.get_dis();
             this.c_list.add(i,Conf.customers[j].num);
-            if(this.check() && r.get_v_value_part()==0)
+            if(this.check() && this.check_p(i+1))
             {
                 if(ans > this.get_dis() - dis)
                 {
@@ -448,28 +470,10 @@ class Route
                 }
             }
             this.c_list.remove(Integer.valueOf(Conf.customers[j].num));
-            r.c_list.remove(Integer.valueOf(Conf.customers[j].num));
         }
         return result;
     }
 
-    double get_v_value_part()// 电量约束
-    {
-        if(this.c_list.size()==0)return 0;
-        double []a_forward = new double[c_list.size()+1];
-        double []a_backward = new double[c_list.size()+1];
-        for(int i=0;i<c_list.size();i++)
-        {
-            a_forward[i] = get_v_forward(i,a_forward);
-        }
-        double ans = 0;
-
-        for(int i=0;i<c_list.size();i++)
-        {
-            ans += Math.max(0,a_forward[i]-Conf.Q);
-        }
-        return ans;
-    }
 
 
 }
@@ -792,8 +796,11 @@ class Algorithm {
         {
             for(Route r :solution.r_list)
             {
-                    if(r.get_v_value()!=0) {
+                boolean flag = r.check_p(r.c_list.size());
+                    while(!flag) {
                         r.find_best_station_insert();
+                        r.print();
+                        flag = r.check_p(r.c_list.size());
                     }
             }
             return solution;
