@@ -136,9 +136,12 @@ public class Conf {
         test_route.c_list.add(6);
         test_route.print();
         */
-
         solution = al.station_pair(solution);
         solution.set_dis();
+        solution.print();
+        solution = al.station_pair(solution);
+        solution.set_dis();
+        solution.print();
         solution = al.station_pair(solution);
         solution.set_dis();
         solution.print();
@@ -418,9 +421,15 @@ class Route
                 break;
             }
         }
-        int t = find_best_station(result_i,r);
-        this.c_list.add(result_i,t);
-
+        for(int j = result_i;j>=0;j--) {
+            int t = find_best_station(j, r);
+            if(t!=-1)
+            {
+                this.c_list.add(j,t);
+                break;
+            }
+            r.c_list.remove(r.c_list.size()-1);
+        }
     }
 
     int find_best_station(int i,Route r)
@@ -431,7 +440,7 @@ class Route
         {
             dis = this.get_dis();
             this.c_list.add(i,Conf.customers[j].num);
-            if(this.check() && r.get_part_v_value()==0 )
+            if(this.check() && r.get_v_value_part()==0)
             {
                 if(ans > this.get_dis() - dis)
                 {
@@ -443,7 +452,8 @@ class Route
         }
         return result;
     }
-    double get_part_v_value()// 电量约束
+
+    double get_v_value_part()// 电量约束
     {
         if(this.c_list.size()==0)return 0;
         double []a_forward = new double[c_list.size()+1];
@@ -451,10 +461,6 @@ class Route
         for(int i=0;i<c_list.size();i++)
         {
             a_forward[i] = get_v_forward(i,a_forward);
-        }
-        for (int i=c_list.size()-1;i>0;i--)
-        {
-            a_backward[i] = get_v_backward(i, a_backward);
         }
         double ans = 0;
 
@@ -464,6 +470,7 @@ class Route
         }
         return ans;
     }
+
 
 }
 
@@ -785,10 +792,9 @@ class Algorithm {
         {
             for(Route r :solution.r_list)
             {
-
-                    r.find_best_station_insert();
-                    r.print();
-
+                    if(r.get_v_value()!=0) {
+                        r.find_best_station_insert();
+                    }
             }
             return solution;
         }
