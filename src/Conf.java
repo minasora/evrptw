@@ -132,6 +132,8 @@ public class Conf {
         solution = al.station_pair(solution);
         solution.set_dis();
         solution.print();
+        for(int i=0;i<=solution.r_list.get(1).c_list.size();i++)
+            System.out.print(solution.r_list.get(1).v[i]+" ");
 
 
 
@@ -261,6 +263,9 @@ class Route
                 }
             }
         v[j+1] = v[j] - Conf.dis_m[this.c_list.get(this.c_list.size()-1)][0];
+        if(Conf.customers[this.c_list.get(this.c_list.size()-1)].Type.equals("f")) {
+            v[j+1] = Conf.Q;
+        }
         if(v[j+1]<0)
             return false;
 
@@ -432,14 +437,13 @@ class Route
     void find_best_station_insert()
     {
         int result_i = 0;
-        this.check_p(this.c_list.size());
+        if(this.check_p(this.c_list.size()))
+            return;
         for(int i=0;i<this.c_list.size()+1;i++)
         {
             if(this.v[i+1]<0)
             {
-
-
-                result_i = i-1;
+                result_i = i;
 
             }
         }
@@ -466,7 +470,7 @@ class Route
         {
             dis = this.get_dis();
             this.c_list.add(i,Conf.customers[j].num);
-            if(this.check() && this.check_p(i+2))
+            if(this.check() && this.v[i]-Conf.dis_m[this.c_list.get(i-1)][this.c_list.get(i)]>0)
             {
                 if(ans > this.get_dis() - dis)
                 {
