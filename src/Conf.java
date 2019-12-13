@@ -16,7 +16,9 @@ public class Conf {
     static double r;// fuel consumption rate
     static double g;// inverse refueling rate
     static double v;// average Velocity
+    static ArrayList<Route> route_pool = new ArrayList(); // 路径池
     static Customer customers[] = new Customer[c_N+1+q_N];
+    static Customer new_customers[] = new Customer[c_N+1+q_N];
     static Customer chargestations[] = new Customer[q_N];
     static Q_best q_bests[];
     static void input(String file_name) throws FileNotFoundException
@@ -66,6 +68,10 @@ public class Conf {
     }
     static void initialize()//get the q_best and the cost_m
     {
+        for(int i=0;i< Conf.c_N;i++)
+        {
+            customers[i].num = i;
+        }
         dis_m = new double[c_N][c_N];
         for(int i=0;i<c_N;i++)
         {
@@ -101,39 +107,9 @@ public class Conf {
         {
             e.printStackTrace();
         }
-        initialize();
+
         Algorithm al = new Algorithm();
-        Route route = new Route();
-        Solution solution = al.get_ini_solution_time();
-        solution.print();
-        System.out.println(solution.size());
-        System.out.println(solution.r_list.get(0).check());
-        Solution new_solution = solution.deepcopy();
-        for(int i=1;i<=1000;i++)
-        {
-            while(true) {
-                al.large_neigh_search(solution);
-                if(solution.relaxed_clist.size()==0)
-                    break;
-                else
-                {
-                    solution = new_solution.deepcopy();
-                }
-            }
-            if(solution.relaxed_clist.size()!=0 || solution.dis > new_solution.dis)
-                solution = new_solution.deepcopy();
-            else
-            {
-                new_solution = solution.deepcopy();
-            }
-            System.out.println(solution.dis);
-        }
-
-        solution = al.station_pair(solution);
-        solution.set_dis();
-        solution.print();
-
-
+        al.PFA();
 
 
 
@@ -670,8 +646,7 @@ class Algorithm {
         boolean if_new_route = false;
         Route route = new Route();
         Solution solution = new Solution();
-        for(int i=0;i<time_customers.size();i++)
-        {
+        for (int i = 0; i < time_customers.size(); i++) {
             solution.unrelaxed_clist.add(time_customers.get(i).num);
         }
         while (time_customers.size() != 0) {
@@ -683,7 +658,7 @@ class Algorithm {
             }
             if_new_route = true;
             Iterator<Customer> iterator = time_customers.iterator();
-            while(iterator.hasNext()) {
+            while (iterator.hasNext()) {
                 Customer c = iterator.next();
                 route.c_list.add(c.num);
                 boolean if_insert = route.check();
@@ -697,121 +672,185 @@ class Algorithm {
                 }
             }
         }
-            solution.r_list.add(route);
+        solution.r_list.add(route);
 
-            solution.set_dis();
-            return solution;
+        solution.set_dis();
+        return solution;
 
 
     }
-        Solution get_ini_solution_NNH()// 获得初始解，使用最优插入算法
-        {
-            Solution ini_solution = new Solution();
-            ArrayList<AngelCustomer> sorted_customer = get_sort_customers();
 
-            Route route = new Route();
-            route.c_list.add(sorted_customer.get(0).id);
-            ini_solution.unrelaxed_clist.add(sorted_customer.get(0).id);
-            sorted_customer.remove(sorted_customer.get(0));
-            ini_solution.r_list.add(route.deepcopy());
-            route.c_list.clear();
-            for (AngelCustomer c : sorted_customer) {
-                Pos pos = find_best_Pos(ini_solution, c.id);
-                int i = pos.pos_i;
-                if (i == -1) {
-                    route.c_list.add(c.id);
-                    ini_solution.unrelaxed_clist.add(c.id);
-                    route.get_dis();
-                    ini_solution.r_list.add(route.deepcopy());
-                    route.c_list.clear();
+    Solution get_ini_solution_NNH()// 获得初始解，使用最优插入算法
+    {
+        Solution ini_solution = new Solution();
+        ArrayList<AngelCustomer> sorted_customer = get_sort_customers();
 
-                } else {
-                    ini_solution.r_list.get(pos.route_id).c_list.add(pos.pos_i, c.id);
-                    ini_solution.unrelaxed_clist.add(c.id);
-                }
+        Route route = new Route();
+        route.c_list.add(sorted_customer.get(0).id);
+        ini_solution.unrelaxed_clist.add(sorted_customer.get(0).id);
+        sorted_customer.remove(sorted_customer.get(0));
+        ini_solution.r_list.add(route.deepcopy());
+        route.c_list.clear();
+        for (AngelCustomer c : sorted_customer) {
+            Pos pos = find_best_Pos(ini_solution, c.id);
+            int i = pos.pos_i;
+            if (i == -1) {
+                route.c_list.add(c.id);
+                ini_solution.unrelaxed_clist.add(c.id);
+                route.get_dis();
+                ini_solution.r_list.add(route.deepcopy());
+                route.c_list.clear();
+
+            } else {
+                ini_solution.r_list.get(pos.route_id).c_list.add(pos.pos_i, c.id);
+                ini_solution.unrelaxed_clist.add(c.id);
             }
-
-            ini_solution.set_dis();
-            System.out.println(ini_solution.unrelaxed_clist.size());
-            return ini_solution;
         }
-        Solution random_remove_customers (Solution solution)
-        {
-            int p = 10;
-            while (solution.relaxed_clist.size() != p) {
-                int i = get_random_int(0, solution.unrelaxed_clist.size());
-                solution.relaxed_clist.add(solution.unrelaxed_clist.get(i));
-                solution.remove(solution.unrelaxed_clist.get(i));
-                solution.unrelaxed_clist.remove(i);
 
-            }
-            return solution;
+        ini_solution.set_dis();
+        System.out.println(ini_solution.unrelaxed_clist.size());
+        return ini_solution;
+    }
+
+    Solution random_remove_customers(Solution solution) {
+        int p = 10;
+        while (solution.relaxed_clist.size() != p) {
+            int i = get_random_int(0, solution.unrelaxed_clist.size());
+            solution.relaxed_clist.add(solution.unrelaxed_clist.get(i));
+            solution.remove(solution.unrelaxed_clist.get(i));
+            solution.unrelaxed_clist.remove(i);
 
         }
-        Solution greedy_insert_customers (Solution solution) // 贪婪法重新插回
-        {
-            double ans = 10000;
-            int result_i = -1;
-            Pos result_pos = new Pos(-1, -1);
-            for (int i : solution.relaxed_clist) {
-                double dis = solution.dis;
+        return solution;
 
-                Pos pos = find_best_Pos(solution, i);
-                if (pos.pos_i == -1)
-                    return solution;
-                solution.r_list.get(pos.route_id).c_list.add(pos.pos_i, i);
-                solution.set_dis();
-                if (ans > solution.dis - dis) {
-                    result_i = i;
-                    result_pos = pos;
-                }
-                solution.r_list.get(pos.route_id).c_list.remove(pos.pos_i);
-            }
-            solution.r_list.get(result_pos.route_id).c_list.add(result_pos.pos_i, result_i);
-            solution.unrelaxed_clist.add(result_i);
-            solution.relaxed_clist.remove(Integer.valueOf(result_i));
-            solution.set_dis();
-            return solution;
-        }
-        // Solution find_best_charge_station()
-        //  {
+    }
 
-        // }
-
-        Solution large_neigh_search (Solution solution)
-        {
+    Solution greedy_insert_customers(Solution solution) // 贪婪法重新插回
+    {
+        double ans = 10000;
+        int result_i = -1;
+        Pos result_pos = new Pos(-1, -1);
+        for (int i : solution.relaxed_clist) {
             double dis = solution.dis;
-            solution = random_remove_customers(solution);
+
+            Pos pos = find_best_Pos(solution, i);
+            if (pos.pos_i == -1)
+                return solution;
+            solution.r_list.get(pos.route_id).c_list.add(pos.pos_i, i);
             solution.set_dis();
-            while (solution.relaxed_clist.size() != 0) {
-                if (solution.dis >= dis) break;
-                solution.set_dis();
-                double old_dis = solution.dis;
-                solution = greedy_insert_customers(solution);
-                solution.set_dis();
-                if (solution.dis == old_dis) // 剪枝
-                    break;
+            if (ans > solution.dis - dis) {
+                result_i = i;
+                result_pos = pos;
             }
-            return solution;
+            solution.r_list.get(pos.route_id).c_list.remove(pos.pos_i);
         }
+        solution.r_list.get(result_pos.route_id).c_list.add(result_pos.pos_i, result_i);
+        solution.unrelaxed_clist.add(result_i);
+        solution.relaxed_clist.remove(Integer.valueOf(result_i));
+        solution.set_dis();
+        return solution;
+    }
+    // Solution find_best_charge_station()
+    //  {
 
+    // }
 
-
-        Solution station_pair(Solution solution) // 满足电量约束//修复不可行解
-        {
-            for(Route r :solution.r_list)
-            {
-                boolean flag = r.check_p(r.c_list.size());
-                    while(!flag) {
-                        r.find_best_station_insert();
-                        //r.print();
-
-                        flag = r.check_p(r.c_list.size());
-                    }
-            }
-            return solution;
+    Solution large_neigh_search(Solution solution) {
+        double dis = solution.dis;
+        solution = random_remove_customers(solution);
+        solution.set_dis();
+        while (solution.relaxed_clist.size() != 0) {
+            if (solution.dis >= dis) break;
+            solution.set_dis();
+            double old_dis = solution.dis;
+            solution = greedy_insert_customers(solution);
+            solution.set_dis();
+            if (solution.dis == old_dis) // 剪枝
+                break;
         }
+        return solution;
     }
 
+
+    Solution station_pair(Solution solution) // 满足电量约束//修复不可行解
+    {
+        for (Route r : solution.r_list) {
+            boolean flag = r.check_p(r.c_list.size());
+            while (!flag) {
+                r.find_best_station_insert();
+                //r.print();
+
+                flag = r.check_p(r.c_list.size());
+            }
+        }
+        return solution;
+    }
+
+    Solution PFA() {
+        Customer[] target_customers = new Customer[Conf.c_N + 1];
+        generate_new_customers(target_customers,20);
+        Solution solution = new Solution();
+        return solution;
+    }
+    void generate_nwe_pool(Solution solution)
+    {
+
+    }
+    Solution get_result_solution()
+    {
+        Conf.initialize();
+        Algorithm al = new Algorithm();
+        Route route = new Route();
+        Solution solution = al.get_ini_solution_time();
+        solution.print();
+        System.out.println(solution.size());
+        System.out.println(solution.r_list.get(0).check());
+        Solution new_solution = solution.deepcopy();
+        for(int i=1;i<=1000;i++) {
+            while (true) {
+                al.large_neigh_search(solution);
+                if (solution.relaxed_clist.size() == 0)
+                    break;
+                else {
+                    solution = new_solution.deepcopy();
+                }
+            }
+            if (solution.relaxed_clist.size() != 0 || solution.dis > new_solution.dis)
+                solution = new_solution.deepcopy();
+            else {
+                new_solution = solution.deepcopy();
+            }
+            System.out.println(solution.dis);
+        }
+        solution = al.station_pair(solution);
+        solution.set_dis();
+        solution.print();
+        return solution;
+    }
+    void generate_new_customers(Customer [] target_customers,int p) {
+        Conf.new_customers = Conf.customers; // baocun
+        int C_N = Conf.c_N;
+        for (int i = 0; i < Conf.q_N; i++)
+        {
+            target_customers[i] = Conf.customers[i];
+        }
+        for(int i=Conf.q_N;i<=Conf.q_N + p;i++) {
+            int j = get_random_int(0, Conf.c_N - Conf.q_N) + Conf.q_N + 1; // 随机生成顾客
+            if (Arrays.asList(target_customers).contains(Conf.customers[j])) {
+                i--;
+                continue;
+            } else {
+                target_customers[i] = Conf.customers[j];
+            }
+        }
+            for(int i=0;i<=Conf.q_N + p;i++)
+                System.out.println(target_customers[i].id);
+            Conf.customers = target_customers;
+            Conf.c_N = Conf.q_N+p+1;
+
+            Solution solution = get_result_solution();
+
+        }
+    }
 
 
