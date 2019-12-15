@@ -843,12 +843,32 @@ class Algorithm {
 
             }
         }
+        solution = get_result_solution();
         solution.print();
         return solution;
     }
     Solution PPFA()
     {
         Solution solution = new Solution();
+        Customer[] target_customers = new Customer[Conf.c_N + 1];
+        ArrayList<Customer> customers = new ArrayList<>();
+        Boolean[] sign = new Boolean[Conf.c_N+1];
+        generate_new_customers(target_customers,25); // 生成配送目标
+        ArrayList<Customer> solve_solution = new ArrayList<>();
+        for(RouteCustomer c:Conf.ppa) {
+            if (if_all_in(c.route, target_customers, sign)) {
+                for (int i : c.route.c_list) {
+                    for (int j = 0; j <= Conf.c_N; j++) {
+                        if (i == Conf.customers[j].true_id) {
+                            sign[j] = true;
+                            break;
+                        }
+                    }
+                }
+                solve_solution.add(c.customer);
+            }
+        }
+        solution = get_result_solution();
         return solution;
     }
     boolean if_all_in(Route r,Customer [] customers,Boolean[] sign)
@@ -990,7 +1010,7 @@ class Algorithm {
                     }
                     else {
                         double cnt = 0;
-                        cnt = Conf.dis_m[0][Conf.customers[r.c_list.get(0)];
+                        cnt = Conf.dis_m[0][r.c_list.get(0)];
                         for (int i = 0; i < r.c_list.size()-1;i++)
                         {
                             cnt += Conf.dis_m[r.c_list.get(i+1)][r.c_list.get(i)];
