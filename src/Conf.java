@@ -17,6 +17,8 @@ public class Conf {
     static double g;// inverse refueling rate
     static double v;// average Velocity
     static ArrayList<Route> route_pool = new ArrayList(); // 路径池
+    static ArrayList<Route> ppa_route_pool = new ArrayList<>(); // 部分路程池
+    static ArrayList<RouteCustomer> ppa = new ArrayList<>();
     static Customer customers[] = new Customer[c_N+1+q_N];
     static Customer new_customers[] = new Customer[c_N+1+q_N];
     static Customer chargestations[] = new Customer[q_N];
@@ -101,15 +103,15 @@ public class Conf {
     {
         try
         {
-            input("c102_21.txt");
+            input("c101_21.txt");
         }
         catch(IOException e)
         {
             e.printStackTrace();
         }
-
         Algorithm al = new Algorithm();
-        al.PFA();
+        Solution solution1 = al.PFA();
+        solution1.print();
 
 
 
@@ -221,7 +223,7 @@ class Route
         v[0] = Conf.Q;
         for(int i=1;i<=j+1;i++)
         {
-            v[i] = -1;
+            v[i] = -10;
         }
         for(int i=1;i<=j;i++) {
 
@@ -418,11 +420,15 @@ class Route
             if(this.v[i+1]<0)
             {
                 result_i = i;
+                break;
 
             }
         }
         while(true) {
+            if(result_i == -1)return;
             int t = find_best_station(result_i);
+
+            System.out.println(result_i);
             if (t == -1)
             {
                 result_i --;
@@ -444,7 +450,12 @@ class Route
         {
             dis = this.get_dis();
             this.c_list.add(i,Conf.customers[j].num);
-             if(this.check() && this.v[i]-Conf.dis_m[this.c_list.get(i-1)][this.c_list.get(i)]>0)
+            double a;
+            if(i == 0)
+                 a = this.v[i]-Conf.dis_m[0][this.c_list.get(i)];
+            else
+                a = this.v[i]-Conf.dis_m[this.c_list.get(i-1)][this.c_list.get(i)];
+             if(this.check() && (a > 0 )  )
             {
                 if(ans > this.get_dis() - dis)
                 {
@@ -453,6 +464,7 @@ class Route
             }
             this.c_list.remove(i);
         }
+
         return result;
     }
 
@@ -553,6 +565,20 @@ class Solution
     }
 }
 
+class RouteCustomer
+{
+    double length;
+    Customer customer;
+    Route route;
+    RouteCustomer deepcopy()
+    {
+        RouteCustomer new_route_customer = new RouteCustomer();
+        new_route_customer.length = this.length;
+        new_route_customer.route = this.route.deepcopy();
+        new_route_customer.customer = this.customer;
+        return new_route_customer;
+    }
+}
 
 class AngelCustomer implements Comparable<AngelCustomer>
 {
@@ -778,13 +804,16 @@ class Algorithm {
     {
         for (Route r : solution.r_list) {
             boolean flag = r.check_p(r.c_list.size());
-            while (!flag) {
                 r.find_best_station_insert();
-                //r.print();
+                r.print();
 
                 flag = r.check_p(r.c_list.size());
+                if(!flag)
+                {
+                    r.find_best_station_insert();
+                }
             }
-        }
+
         return solution;
     }
 
@@ -792,7 +821,7 @@ class Algorithm {
         Customer[] target_customers = new Customer[Conf.c_N + 1];
         Boolean[] sign = new Boolean[Conf.c_N+1];
         int t = Conf.c_N;
-        for(int i=1;i<=20;i++) {
+        for(int i=1;i<=200;i++) {
             generate_new_customers(target_customers, 50);
             get_route_pool(target_customers,50,t);
         }
@@ -817,20 +846,27 @@ class Algorithm {
         solution.print();
         return solution;
     }
+    Solution PPFA()
+    {
+        Solution solution = new Solution();
+        return solution;
+    }
     boolean if_all_in(Route r,Customer [] customers,Boolean[] sign)
-    {       boolean flag= false;
-        for(int i:r.c_list)
-        {
-            for(int j = 0;j < Conf.q_N + 25; j++)
-            {
-                if(i == Conf.customers[j].true_id && !sign[j]) // 没被用过
-                    // {
-                    flag = true;
+    {
+        boolean flag= false;
+        for(int i:r.c_list) {
+            if (Conf.customers[i].Type.equals("f")) {
+                for (int j = 0; j < Conf.q_N + 25; j++) {
+                    if (i == Conf.customers[j].true_id && !sign[j]) // 没被用过
+                        // {
+                        flag = true;
                     break;
                 }
             }
             if(!flag)
                 return false;
+        }
+
 
 
         return true;
@@ -846,7 +882,7 @@ class Algorithm {
         System.out.println(solution.size());
         System.out.println(solution.r_list.get(0).check());
         Solution new_solution = solution.deepcopy();
-        for(int i=1;i<=10;i++) {
+        for(int i=1;i<=100;i++) {
             while (true) {
                 al.large_neigh_search(solution);
                 if (solution.relaxed_clist.size() == 0)
@@ -864,7 +900,7 @@ class Algorithm {
         }
         solution = al.station_pair(solution);
         solution.set_dis();
-
+        solution.print();
         return solution;
     }
 
@@ -893,22 +929,122 @@ class Algorithm {
             Conf.c_N = Conf.q_N+p+1;
 
             Solution solution = get_result_solution();
-            for(Route r : solution.r_list)
-            {
+            for(Route r : solution.r_list) {
                 r.print();
-                Route new_route = new Route();
-                for(int i:r.c_list)
-                {
+                if (r.check_p(r.c_list.size())) {
+                    Route new_route = new Route();
+                    for (int i : r.c_list) {
 
-                    new_route.c_list.add(Conf.customers[i].true_id);
+                        new_route.c_list.add(Conf.customers[i].true_id);
 
+                    }
+                    new_route.dis = r.dis;
+                    Conf.route_pool.add(new_route); // 储存路径
                 }
-                new_route.dis = r.dis;
-                Conf.route_pool.add(new_route); // 储存路径
             }
             Conf.customers = Conf.new_customers;
             Conf.c_N = C_N;
         }
+        void part_route_by_length(int j) // 按照g拆分
+        {
+            for (Route r : Conf.route_pool) {
+                RouteCustomer route_customer = new RouteCustomer();
+                Route route = new Route();
+                if (r.c_list.size() <= j)// 比固定长度小
+                {
+                    route_customer.route = r;
+                    route_customer.length = r.dis;
+                    route_customer.customer = Conf.customers[r.c_list.get(r.c_list.size() - 1)];
+                    Conf.ppa.add(route_customer.deepcopy());
+                    route_customer = new RouteCustomer();
+                }
+                else {
+                    int cnt = 0;
+                    for (int i = 0; i < r.c_list.size();i++)
+                    {
+                        cnt++;
+                        route.c_list.add(r.c_list.get(i));
+                        if(cnt==j)
+                        {
+                            route_customer.route = route;
+                            route_customer.length = route.get_dis();
+                            route_customer.customer = Conf.customers[r.c_list.get(i)];
+                        }
+                    }
+                }
+            }
+        }
+        void part_route_by_cost(int j)
+        {
+            {
+                for (Route r : Conf.route_pool) {
+                    RouteCustomer route_customer = new RouteCustomer();
+                    Route route = new Route();
+                    if (r.dis<j)// 比固定长度小
+                    {
+                        route_customer.route = r;
+                        route_customer.length = r.dis;
+                        route_customer.customer = Conf.customers[r.c_list.get(r.c_list.size() - 1)];
+                        Conf.ppa.add(route_customer.deepcopy());
+                        route_customer = new RouteCustomer();
+                    }
+                    else {
+                        double cnt = 0;
+                        cnt = Conf.dis_m[0][Conf.customers[r.c_list.get(0)];
+                        for (int i = 0; i < r.c_list.size()-1;i++)
+                        {
+                            cnt += Conf.dis_m[r.c_list.get(i+1)][r.c_list.get(i)];
+                            route.c_list.add(r.c_list.get(i));
+                            if(cnt>=j)
+                            {
+                                route_customer.route = route;
+                                route_customer.length = route.get_dis();
+                                route_customer.customer = Conf.customers[r.c_list.get(i)];
+                                cnt = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        void part_route_by_time()
+        {
+            return;
+        }
+       void part_route_by_charge()
+        {
+            return;
+        }
+        void part_route_by_demand()
+        {
+            return;
+        }
+        void select_by_nodes_short()
+        {
+            return;
+        }
+        void select_by_nodes_long()
+        {
+            return;
+        }
+        void select_by_cost_more()
+        {
+            return;
+        }
+        void select_by_cost_less()
+        {
+            return;
+        }
+        void select_by_more_time()
+        {
+            return;
+        }
+        void select_by_less_time()
+        {
+            return;
+        }
+
+
     }
 
 
