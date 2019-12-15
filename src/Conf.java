@@ -128,6 +128,7 @@ class Customer implements Comparable<Customer>// the Customers
     double s_time;
     double d_time;
     double demand;
+    int true_id;
 
 
     public Customer(int num,String Type,String id, double x, double y, double r_time, double s_time, double d_time, double demand) {
@@ -140,6 +141,7 @@ class Customer implements Comparable<Customer>// the Customers
         this.d_time = d_time;
         this.demand = demand;
         this.num = num;
+        this.true_id = num;
     }
     void print()
     {
@@ -442,7 +444,7 @@ class Route
         {
             dis = this.get_dis();
             this.c_list.add(i,Conf.customers[j].num);
-            if(this.check() && this.v[i]-Conf.dis_m[this.c_list.get(i-1)][this.c_list.get(i)]>0)
+             if(this.check() && this.v[i]-Conf.dis_m[this.c_list.get(i-1)][this.c_list.get(i)]>0)
             {
                 if(ans > this.get_dis() - dis)
                 {
@@ -788,25 +790,63 @@ class Algorithm {
 
     Solution PFA() {
         Customer[] target_customers = new Customer[Conf.c_N + 1];
-        generate_new_customers(target_customers,20);
+        Boolean[] sign = new Boolean[Conf.c_N+1];
+        int t = Conf.c_N;
+        for(int i=1;i<=20;i++) {
+            generate_new_customers(target_customers, 50);
+            get_route_pool(target_customers,50,t);
+        }
+        generate_new_customers(target_customers,25);
+        ArrayList end_customers = new ArrayList();
         Solution solution = new Solution();
+        for(Route r: Conf.route_pool) {
+            if (if_all_in(r, target_customers, sign)) {
+                solution.r_list.add(r.deepcopy());
+                for (Integer i  : r.c_list)
+                {
+                    for (int j = 0; j <= Conf.c_N; j++) {
+                        if(i == Conf.customers[j].true_id) {
+                            sign[j] = true;
+                            break;
+                        }
+                    }
+                }
+
+            }
+        }
+        solution.print();
         return solution;
     }
-    void generate_nwe_pool(Solution solution)
-    {
+    boolean if_all_in(Route r,Customer [] customers,Boolean[] sign)
+    {       boolean flag= false;
+        for(int i:r.c_list)
+        {
+            for(int j = 0;j < Conf.q_N + 25; j++)
+            {
+                if(i == Conf.customers[j].true_id && !sign[j]) // 没被用过
+                    // {
+                    flag = true;
+                    break;
+                }
+            }
+            if(!flag)
+                return false;
 
+
+        return true;
     }
+
+
     Solution get_result_solution()
     {
         Conf.initialize();
         Algorithm al = new Algorithm();
         Route route = new Route();
         Solution solution = al.get_ini_solution_time();
-        solution.print();
         System.out.println(solution.size());
         System.out.println(solution.r_list.get(0).check());
         Solution new_solution = solution.deepcopy();
-        for(int i=1;i<=1000;i++) {
+        for(int i=1;i<=10;i++) {
             while (true) {
                 al.large_neigh_search(solution);
                 if (solution.relaxed_clist.size() == 0)
@@ -820,36 +860,54 @@ class Algorithm {
             else {
                 new_solution = solution.deepcopy();
             }
-            System.out.println(solution.dis);
+            //System.out.println(solution.dis);
         }
         solution = al.station_pair(solution);
         solution.set_dis();
-        solution.print();
+
         return solution;
     }
+
+
     void generate_new_customers(Customer [] target_customers,int p) {
         Conf.new_customers = Conf.customers; // baocun
         int C_N = Conf.c_N;
-        for (int i = 0; i < Conf.q_N; i++)
-        {
+        for (int i = 0; i < Conf.q_N; i++) {
             target_customers[i] = Conf.customers[i];
         }
-        for(int i=Conf.q_N;i<=Conf.q_N + p;i++) {
+        for (int i = Conf.q_N; i <= Conf.q_N + p; i++) {
             int j = get_random_int(0, Conf.c_N - Conf.q_N) + Conf.q_N + 1; // 随机生成顾客
             if (Arrays.asList(target_customers).contains(Conf.customers[j])) {
                 i--;
                 continue;
             } else {
                 target_customers[i] = Conf.customers[j];
+                }
             }
+
         }
+        void get_route_pool(Customer []target_customers,int p, int C_N) {
             for(int i=0;i<=Conf.q_N + p;i++)
                 System.out.println(target_customers[i].id);
             Conf.customers = target_customers;
             Conf.c_N = Conf.q_N+p+1;
 
             Solution solution = get_result_solution();
+            for(Route r : solution.r_list)
+            {
+                r.print();
+                Route new_route = new Route();
+                for(int i:r.c_list)
+                {
 
+                    new_route.c_list.add(Conf.customers[i].true_id);
+
+                }
+                new_route.dis = r.dis;
+                Conf.route_pool.add(new_route); // 储存路径
+            }
+            Conf.customers = Conf.new_customers;
+            Conf.c_N = C_N;
         }
     }
 
