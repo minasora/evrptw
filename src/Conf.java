@@ -990,7 +990,7 @@ class Algorithm {
                     }
                     else {
                         double cnt = 0;
-                        cnt = Conf.dis_m[0][Conf.customers[r.c_list.get(0)];
+                        cnt = Conf.dis_m[0][r.c_list.get(0)];
                         for (int i = 0; i < r.c_list.size()-1;i++)
                         {
                             cnt += Conf.dis_m[r.c_list.get(i+1)][r.c_list.get(i)];
