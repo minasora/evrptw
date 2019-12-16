@@ -23,6 +23,8 @@ public class Conf {
     static Customer new_customers[] = new Customer[c_N+1+q_N];
     static Customer chargestations[] = new Customer[q_N];
     static Q_best q_bests[];
+    double []select = new double[5];
+    double []particle = new double[5];
     static void input(String file_name) throws FileNotFoundException
     {
         String ID;
@@ -110,8 +112,30 @@ public class Conf {
             e.printStackTrace();
         }
         Algorithm al = new Algorithm();
-        Solution solution1 = al.PFA();
-        solution1.print();
+
+        Customer[] target_customers = new Customer[Conf.c_N + 1];
+        int p = 20;
+        int t = 10;
+        al.generate_new_customers(target_customers,p);
+        Conf.customers = target_customers;
+        Conf.c_N = Conf.q_N+p+1;
+        long s_time = System.currentTimeMillis();
+        Solution solution= al.get_result_solution(5000);
+        long t_time = System.currentTimeMillis();
+        System.out.println("ALNS时间"+(t_time-s_time)/1000);
+        System.out.println(solution.dis);
+        Conf.c_N = 122;
+        Conf.customers = Conf.new_customers;
+      //  Solution solution1 = al.PFA(t,p);
+     //   System.out.println(solution1.get_dis());
+        Conf.c_N = 122;
+        Conf.customers = Conf.new_customers;
+        Solution solution2 = al.PPFA(p);
+        System.out.println(solution2.get_dis());
+        Conf.c_N = 122;
+        Conf.customers = Conf.new_customers;
+        Solution solution3 = al.APPFA(p);
+        System.out.println(solution3.get_dis());
 
 
 
@@ -428,7 +452,6 @@ class Route
             if(result_i == -1)return;
             int t = find_best_station(result_i);
 
-            System.out.println(result_i);
             if (t == -1)
             {
                 result_i --;
@@ -497,6 +520,15 @@ class Solution
                 return false;
         }
         return true;
+    }
+    double get_dis()
+    {
+        double a=0;
+        for(Route r:this.r_list)
+        {
+            a += r.dis;
+        }
+        return a;
     }
     void set_dis()
     {
@@ -736,7 +768,7 @@ class Algorithm {
         }
 
         ini_solution.set_dis();
-        System.out.println(ini_solution.unrelaxed_clist.size());
+
         return ini_solution;
     }
 
@@ -805,8 +837,6 @@ class Algorithm {
         for (Route r : solution.r_list) {
             boolean flag = r.check_p(r.c_list.size());
                 r.find_best_station_insert();
-                r.print();
-
                 flag = r.check_p(r.c_list.size());
                 if(!flag)
                 {
@@ -817,14 +847,19 @@ class Algorithm {
         return solution;
     }
 
-    Solution PFA() {
+    Solution PFA(int h,int p) {
         Customer[] target_customers = new Customer[Conf.c_N + 1];
         Boolean[] sign = new Boolean[Conf.c_N+1];
         int t = Conf.c_N;
-        for(int i=1;i<=200;i++) {
+        System.out.println("积攒历史路径");
+        for(int i=1;i<=h;i++) {
             generate_new_customers(target_customers, 50);
             get_route_pool(target_customers,50,t);
         }
+        generate_new_customers(target_customers,p);
+        Conf.customers = target_customers;
+        Conf.c_N = Conf.q_N+p+1;
+        System.out.println("历史路径积累完成");
         generate_new_customers(target_customers,25);
         ArrayList end_customers = new ArrayList();
         Solution solution = new Solution();
@@ -843,33 +878,124 @@ class Algorithm {
 
             }
         }
-        solution = get_result_solution();
-        solution.print();
+
+        long startTime = System.currentTimeMillis();
+        solution = get_result_solution(800);
+        long endTime   = System.currentTimeMillis();
+        long TotalTime = endTime - startTime;
+        System.out.println("PFA用时："+TotalTime/1000);
         return solution;
     }
-    Solution PPFA()
+    Solution PPFA(int p)
     {
         Solution solution = new Solution();
         Customer[] target_customers = new Customer[Conf.c_N + 1];
-        ArrayList<Customer> customers = new ArrayList<>();
         Boolean[] sign = new Boolean[Conf.c_N+1];
-        generate_new_customers(target_customers,25); // 生成配送目标
-        ArrayList<Customer> solve_solution = new ArrayList<>();
-        for(RouteCustomer c:Conf.ppa) {
-            if (if_all_in(c.route, target_customers, sign)) {
-                for (int i : c.route.c_list) {
+        int t = Conf.c_N;
+        generate_new_customers(target_customers,p);
+        Conf.customers = target_customers;
+        Conf.c_N = Conf.q_N+p+1;
+        for(RouteCustomer r: Conf.ppa) {
+            if (if_all_in(r.route, target_customers, sign)) {
+                solution.r_list.add(r.route.deepcopy());
+                for (Integer i  : r.route.c_list)
+                {
                     for (int j = 0; j <= Conf.c_N; j++) {
-                        if (i == Conf.customers[j].true_id) {
+                        if(i == Conf.customers[j].true_id) {
                             sign[j] = true;
                             break;
                         }
                     }
                 }
-                solve_solution.add(c.customer);
+
             }
         }
-        solution = get_result_solution();
+        int k = 1000;
+        long startTime = System.currentTimeMillis();
+        solution = get_result_solution(1500);
+        long endTime   = System.currentTimeMillis();
+        long TotalTime = endTime - startTime;
+        System.out.println("PPFA用时："+TotalTime/1000);
         return solution;
+    }
+    Solution APPFA(int p)
+    {
+        double []select = new double[5];
+        double []particle = new double[5];
+        double ans_s = 0;
+        double ans_p = 0;
+        for(int i=0;i<5;i++)
+        {
+            ans_s += select[i];
+            ans_p += select[i];
+        }
+        Customer[] target_customers = new Customer[Conf.c_N + 1];
+        Boolean[] sign = new Boolean[Conf.c_N+1];
+        int t = Conf.c_N;
+        generate_new_customers(target_customers,p);
+        Conf.customers = target_customers;
+        Conf.c_N = Conf.q_N+p+1;
+        System.out.println(" ");
+        Random r = new Random();
+        double g = r.nextDouble();
+        double res_i = 0;
+        double res_j = 0;
+        for(int i=0;i<=4;i++)
+        {
+            res_i+=select[i]/ans_s;
+            if(res_i>g)
+            {
+                res_i = i;
+                break;
+            }
+
+        }
+        for(int i=0;i<=4;i++)
+        {
+            res_j+=particle[i]/ans_s;
+            if(res_i>g)
+            {
+                res_j = i;
+                break;
+            }
+
+        }
+        ArrayList end_customers = new ArrayList();
+        Solution solution = new Solution();
+        RouteCustomer []rs = new RouteCustomer[Conf.c_N];
+        if(t>1) {
+            switch ((int) res_i) {
+                case 1:
+                    part_route_by_length(5);
+                case 2:
+                    part_route_by_time(500);
+                case 3:
+                    part_route_by_cost(50);
+                case 4:
+                    part_route_by_charge(66);
+            }
+            switch ((int) res_j) {
+                case 1:
+                    select_by_cost_less(rs);
+                case 2:
+                    select_by_cost_more(rs);
+                case 3:
+                    select_by_more_time(rs);
+                case 4:
+                    select_by_nodes_long(rs);
+
+            }
+        }
+        long startTime = System.currentTimeMillis();
+        solution = get_result_solution(2000);
+        long endTime   = System.currentTimeMillis();
+        long TotalTime = endTime - startTime;
+        System.out.println("APPFA用时："+TotalTime/1000);
+        return solution;
+
+
+
+
     }
     boolean if_all_in(Route r,Customer [] customers,Boolean[] sign)
     {
@@ -893,16 +1019,15 @@ class Algorithm {
     }
 
 
-    Solution get_result_solution()
+    Solution get_result_solution(int j)
     {
         Conf.initialize();
         Algorithm al = new Algorithm();
         Route route = new Route();
         Solution solution = al.get_ini_solution_time();
-        System.out.println(solution.size());
         System.out.println(solution.r_list.get(0).check());
         Solution new_solution = solution.deepcopy();
-        for(int i=1;i<=100;i++) {
+        for(int i=1;i<=j;i++) {
             while (true) {
                 al.large_neigh_search(solution);
                 if (solution.relaxed_clist.size() == 0)
@@ -920,7 +1045,7 @@ class Algorithm {
         }
         solution = al.station_pair(solution);
         solution.set_dis();
-        solution.print();
+
         return solution;
     }
 
@@ -943,14 +1068,11 @@ class Algorithm {
 
         }
         void get_route_pool(Customer []target_customers,int p, int C_N) {
-            for(int i=0;i<=Conf.q_N + p;i++)
-                System.out.println(target_customers[i].id);
             Conf.customers = target_customers;
             Conf.c_N = Conf.q_N+p+1;
 
-            Solution solution = get_result_solution();
+            Solution solution = get_result_solution(100);
             for(Route r : solution.r_list) {
-                r.print();
                 if (r.check_p(r.c_list.size())) {
                     Route new_route = new Route();
                     for (int i : r.c_list) {
@@ -1027,41 +1149,167 @@ class Algorithm {
                 }
             }
         }
-        void part_route_by_time()
+        void part_route_by_time(int j)
         {
+            {
+                for (Route r : Conf.route_pool) {
+                    RouteCustomer route_customer = new RouteCustomer();
+                    Route route = new Route();
+                    if (r.dis<j)// 比固定时间小
+                    {
+                        route_customer.route = r;
+                        route_customer.length = r.dis;
+                        route_customer.customer = Conf.customers[r.c_list.get(r.c_list.size() - 1)];
+                        Conf.ppa.add(route_customer.deepcopy());
+                        route_customer = new RouteCustomer();
+                    }
+                    else {
+                        double cnt = 0;
+                        cnt = Conf.dis_m[0][r.c_list.get(0)];
+                        for (int i = 0; i < r.c_list.size()-1;i++)
+                        {
+                            cnt += Conf.customers[r.c_list.get(i)].d_time;
+                            route.c_list.add(r.c_list.get(i));
+                            if(cnt>=j)
+                            {
+                                cnt += Conf.customers[r.c_list.get(i)].d_time;
+                                route_customer.route = route;
+                                route_customer.length = route.get_dis();
+                                route_customer.customer = Conf.customers[r.c_list.get(i)];
+                                cnt = 0;
+                            }
+                        }
+                    }
+                }
+            }
             return;
         }
-       void part_route_by_charge()
+       void part_route_by_charge(int j)
         {
-            return;
+            {
+                {
+                    for (Route r : Conf.route_pool) {
+                        RouteCustomer route_customer = new RouteCustomer();
+                        Route route = new Route();
+                        if (r.v[r.c_list.size()-1]<j)// 比固定时间小
+                        {
+                            route_customer.route = r;
+                            route_customer.length = r.dis;
+                            route_customer.customer = Conf.customers[r.c_list.get(r.c_list.size() - 1)];
+                            Conf.ppa.add(route_customer.deepcopy());
+                            route_customer = new RouteCustomer();
+                        }
+                        else {
+                            double cnt = 0;
+                            cnt = Conf.dis_m[0][r.c_list.get(0)];
+                            for (int i = 0; i < r.c_list.size()-1;i++)
+                            {
+                                cnt += 1;
+                                route.c_list.add(r.c_list.get(i));
+                                if(cnt>=j)
+                                {
+                                    cnt = 0;
+                                    route_customer.route = route;
+                                    route_customer.length = route.get_dis();
+                                    route_customer.customer = Conf.customers[r.c_list.get(i)];
+                                    cnt = 0;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         }
-        void part_route_by_demand()
+        RouteCustomer select_by_nodes_short(RouteCustomer targets[])
         {
-            return;
+            RouteCustomer res = new RouteCustomer();
+            int ans  = 1000000;
+            for(int i=0;i<targets.length;i++)
+            {
+                if(ans>targets[i].route.size())
+                {
+                    res = targets[i];
+                    ans = targets[i].route.size();
+                }
+            }
+            return res;
         }
-        void select_by_nodes_short()
+        RouteCustomer select_by_nodes_long(RouteCustomer targets[])
         {
-            return;
+            RouteCustomer res = new RouteCustomer();
+            double  ans  = -1000000;
+            for(int i=0;i<targets.length;i++)
+            {
+                if(ans>targets[i].route.size())
+                {
+                    res = targets[i];
+                    ans = targets[i].route.size();
+                }
+            }
+            return res;
+
         }
-        void select_by_nodes_long()
+        RouteCustomer select_by_cost_more(RouteCustomer targets[])
         {
-            return;
+            RouteCustomer res = new RouteCustomer();
+            double ans  = -1000000;
+            for(int i=0;i<targets.length;i++)
+            {
+                if(ans>targets[i].route.dis)
+                {
+                    res = targets[i];
+                    ans = targets[i].route.size();
+                }
+            }
+            return res;
         }
-        void select_by_cost_more()
+        RouteCustomer select_by_cost_less(RouteCustomer targets[])
         {
-            return;
+
+                RouteCustomer res = new RouteCustomer();
+                double  ans  = 1000000;
+                for(int i=0;i<targets.length;i++)
+                {
+                    if(ans>targets[i].route.dis)
+                    {
+                        res = targets[i];
+                        ans = targets[i].route.size();
+                    }
+                }
+
+            return res;
+
         }
-        void select_by_cost_less()
+        RouteCustomer select_by_more_time(RouteCustomer targets[])
         {
-            return;
+            RouteCustomer res = new RouteCustomer();
+            double ans  = 1000000;
+            for(int i=0;ans<targets.length;i++)
+            {
+                if(ans<targets[i].customer.d_time)
+                {
+                    res = targets[i];
+                    ans = targets[i].route.size();
+                }
+            }
+
+            return res;
         }
-        void select_by_more_time()
+        RouteCustomer select_by_less_time(RouteCustomer targets[])
         {
-            return;
-        }
-        void select_by_less_time()
-        {
-            return;
+            RouteCustomer res = new RouteCustomer();
+            double ans  = -1000000;
+            for(int i=0;ans>targets[i].customer.d_time;i++)
+            {
+                if(ans<targets[i].customer.d_time)
+                {
+                    res = targets[i];
+                    ans = targets[i].customer.d_time;
+                }
+            }
+
+            return res;
         }
 
 
