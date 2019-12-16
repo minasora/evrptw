@@ -890,7 +890,7 @@ class Algorithm {
         }
 
         long startTime = System.currentTimeMillis();
-        solution = get_result_solution(8800);
+        solution = get_result_solution(7500);
         long endTime   = System.currentTimeMillis();
         long TotalTime = endTime - startTime;
         System.out.println("PFA用时："+TotalTime/1000);
