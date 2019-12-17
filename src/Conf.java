@@ -133,38 +133,164 @@ public class Conf {
                 Customer[] target_customers = new Customer[Conf.c_N + 1];
                 System.out.println("服务顾客数" + p);
                 int t = 10;
-                al.generate_new_customers(target_customers, p);
-                Conf.customers = target_customers;
-                Conf.result_customers = target_customers;
-                Conf.c_N = Conf.q_N + p + 1;
-                long s_time = System.currentTimeMillis();
-                Solution solution = al.get_result_solution(Parameter.iterations);
-                long t_time = System.currentTimeMillis();
-                System.out.println("ALNS时间" + (t_time - s_time) / 1000.0);
-                Conf.alns_time = (t_time-s_time)/1000.0;
-                System.out.println(solution.dis);
-                double dis = solution.dis;
-                Conf.c_N = 122;
-                Conf.customers = Conf.new_customers;
-                Solution solution1 = al.PFA(t, p);
-                System.out.println(solution1.get_dis());
-                System.out.println("PFA相对ALNS dis变化为: "+(solution1.get_dis()-dis)/dis*100+"%");
-                System.out.println("PFA相对ALNS time变化为: "+(double)((Conf.PFA_time-Conf.alns_time)/Conf.alns_time)*100+"%");
-                Conf.c_N = 122;
-                Conf.customers = Conf.new_customers;
-                Solution solution2 = al.PPFA(p);
-                System.out.println(solution2.get_dis());
-                System.out.println("PPFA相对ALNS dis变化为: "+(solution2.get_dis()-dis)/dis*100+"%");
-                System.out.println("PPFA相对ALNS time变化为: "+(double)((Conf.PPFA_time-Conf.alns_time)/Conf.alns_time)*100+"%");
-                Conf.c_N = 122;
-                Conf.customers = Conf.new_customers;
-                Solution solution3 = al.APPFA(p);
-                System.out.println(solution3.get_dis());
-                Conf.c_N = 122;
-                System.out.println("APPFA相对ALNS dis变化为: "+(solution3.get_dis()-dis)/dis*100+"%");
-                System.out.println("APPFA相对ALNS time变化为: "+(double)((Conf.APPFA_time-Conf.alns_time)/Conf.alns_time)*100+"%");
-                Conf.customers = Conf.new_customers;
+                double alns_time =0;
+                double alns_dis = 0;
+                double pfa_time = 0;
+                double pfa_dis = 0;
+                double ppfa_time = 0;
+                double ppfa_dis = 0;
+                double appfa_time = 0;
+                double appfa_dis = 0;
+                double alns_max_time = 0;
+                double alns_min_time = 10000;
+                double pfa_max_time = 0;
+                double pfa_min_time = 10000;
+                double ppfa_min_time = 10000;
+                double ppfa_max_time = 0;
+                double appfa_min_time = 10000;
+                double appfa_max_time = 0;
+                double alns_max_dis = 0;
+                double alns_min_dis = 10000;
+                double pfa_max_dis = 0;
+                double pfa_min_dis = 10000;
+                double ppfa_min_dis = 10000;
+                double ppfa_max_dis = 0;
+                double appfa_min_dis = 10000;
+                double appfa_max_dis = 0;
+                for(int j = 0;j<=10;j++) {
+                    al.generate_new_customers(target_customers, p);
+                    Conf.customers = target_customers;
+                    Conf.result_customers = target_customers;
+                    Conf.c_N = Conf.q_N + p + 1;
+                    long s_time = System.currentTimeMillis();
+                    Solution solution = al.get_result_solution(Parameter.iterations);
+                    long t_time = System.currentTimeMillis();
+                    alns_time += (t_time - s_time) / 1000.0;
+                    alns_dis += solution.get_dis();
+                    if(alns_min_time > (t_time - s_time) )
+                    {
+                        alns_min_time = (t_time - s_time) / 1000.0;
+                    }
+                    if(alns_max_time < (t_time - s_time) )
+                    {
+                        alns_max_time = (t_time - s_time) / 1000.0;
+                    }
+                    if(alns_min_dis > solution.get_dis() )
+                    {
+                        alns_min_dis = solution.get_dis();
+                    }
+                    if(alns_max_dis < solution.get_dis() )
+                    {
+                        alns_max_dis = solution.get_dis();
+                    }
+                    Conf.c_N = 122;
+                    Conf.customers = Conf.new_customers;
+                    Solution solution1 = al.PFA(t, p);
+                    pfa_dis += solution.get_dis();
+                    pfa_time += Conf.PFA_time;
+                    if(pfa_min_time > Conf.PFA_time )
+                    {
+                        pfa_min_time = (Conf.PFA_time);
+                    }
+                    if(pfa_max_time < Conf.PFA_time )
+                    {
+                        pfa_max_time = Conf.PFA_time ;
+                    }
+                    if(pfa_min_dis > solution1.get_dis() )
+                    {
+                        pfa_min_dis = solution1.get_dis();
+                    }
+                    if(pfa_max_dis < solution1.get_dis() )
+                    {
+                        pfa_max_dis =  solution1.get_dis();
+                    }
 
+                    Conf.c_N = 122;
+                    Conf.customers = Conf.new_customers;
+                    Solution solution2 = al.PPFA(p);
+                    ppfa_dis += solution2.get_dis();
+                    ppfa_time += Conf.PPFA_time;
+                    if(ppfa_min_time > Conf.PPFA_time )
+                    {
+                        ppfa_min_time = (Conf.PFA_time);
+                    }
+                    if(ppfa_max_time < Conf.PPFA_time )
+                    {
+                        ppfa_max_time = Conf.PPFA_time ;
+                    }
+                    if(ppfa_min_dis > solution2.get_dis() )
+                    {
+                        ppfa_min_dis = solution2.get_dis();
+                    }
+                    if(ppfa_max_dis < solution2.get_dis() )
+                    {
+                        ppfa_max_dis =  solution2.get_dis();
+                    }
+
+
+
+                    Conf.c_N = 122;
+                    Conf.customers = Conf.new_customers;
+                    Solution solution3 = al.APPFA(p);
+
+                    appfa_dis += solution3.get_dis();
+                    appfa_time += Conf.APPFA_time;
+                    if(appfa_min_time > Conf.APPFA_time )
+                    {
+                        appfa_min_time = (Conf.APPFA_time);
+                    }
+                    if(appfa_max_time < Conf.APPFA_time )
+                    {
+                        appfa_max_time = Conf.APPFA_time ;
+                    }
+                    if(appfa_min_dis > solution3.get_dis() )
+                    {
+                        appfa_min_dis = solution3.get_dis();
+                    }
+                    if(appfa_max_dis < solution3.get_dis() )
+                    {
+                        appfa_max_dis =  solution3.get_dis();
+                    }
+                    Conf.c_N = 122;
+                    Conf.customers = Conf.new_customers;
+                }
+                System.out.println("alns求解时间"+alns_time / 10.0);
+                System.out.println("alns求解花费"+alns_dis / 10.0);
+                System.out.println("alns求解最好时间"+alns_min_time );
+                System.out.println("alns求解最好花费"+alns_min_dis);
+                System.out.println("alns求解最坏时间"+alns_max_time );
+                System.out.println("alns求解最坏花费"+alns_max_dis );
+
+                System.out.println();
+                System.out.println("pfa求解时间"+pfa_time / 10.0);
+                System.out.println("pfa求解花费"+pfa_dis / 10.0);
+                System.out.println("pfa求解最好时间"+pfa_min_time );
+                System.out.println("pfa求解最好花费"+pfa_min_dis);
+                System.out.println("pfa求解最坏时间"+pfa_max_time );
+                System.out.println("pfa求解最坏花费"+pfa_max_dis);
+                System.out.println("pfa求解时间相对alns百分比"+(pfa_time/alns_time)*100+"%");
+                System.out.println("pfa求解花费相对alns百分比"+(pfa_dis/alns_dis)*100+"%");
+
+                System.out.println();
+                System.out.println("ppfa求解时间"+ppfa_time / 10.0);
+                System.out.println("ppfa求解花费"+ppfa_dis / 10.0);
+                System.out.println("ppfa求解最好时间"+ppfa_min_time );
+                System.out.println("ppfa求解最好花费"+ppfa_min_dis );
+                System.out.println("ppfa求解最坏时间"+ppfa_max_time );
+                System.out.println("ppfa求解最坏花费"+ppfa_max_dis );
+                System.out.println("pfa求解时间相对alns百分比"+(ppfa_time/alns_time)*100+"%");
+                System.out.println("pfa求解花费相对alns百分比"+(ppfa_dis/alns_dis)*100+"%");
+
+                System.out.println();
+                System.out.println("appfa求解时间"+appfa_time / 10.0);
+                System.out.println("appfa求解花费"+appfa_dis / 10.0);
+                System.out.println("appfa求解最好时间"+appfa_min_time );
+                System.out.println("appfa求解最好花费"+appfa_min_dis);
+                System.out.println("appfa求解最坏时间"+appfa_max_time );
+                System.out.println("appfa求解最坏花费"+appfa_max_dis );
+                System.out.println("pfa求解时间相对alns百分比"+(appfa_time/alns_time)*100+"%");
+                System.out.println("pfa求解花费相对alns百分比"+(appfa_dis/alns_dis)*100+"%");
+                System.out.println();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -910,7 +1036,6 @@ class Algorithm {
         long endTime   = System.currentTimeMillis();
         long TotalTime = endTime - startTime;
         Conf.PFA_time = TotalTime/1000.0;
-        System.out.println("PFA用时："+TotalTime/1000.0);
         return solution;
     }
     Solution PPFA(int p)
@@ -942,7 +1067,6 @@ class Algorithm {
         solution = get_result_solution(1500+k);
         long endTime   = System.currentTimeMillis();
         long TotalTime = endTime - startTime;
-        System.out.println("PPFA用时："+TotalTime/1000.0);
         Conf.PPFA_time = TotalTime/1000.0;
         return solution;
     }
@@ -1019,7 +1143,6 @@ class Algorithm {
         solution = get_result_solution(2000+k);
         long endTime   = System.currentTimeMillis();
         long TotalTime = endTime - startTime;
-        System.out.println("APPFA用时："+TotalTime/1000.0);
         Conf.APPFA_time = TotalTime/1000.0;
         return solution;
 
