@@ -1,4 +1,5 @@
 import javax.sound.midi.Soundbank;
+import java.awt.*;
 import java.awt.desktop.SystemSleepEvent;
 import java.io.*;
 import java.rmi.activation.ActivationGroup_Stub;
@@ -6,8 +7,8 @@ import java.util.*;
 import java.util.zip.CheckedOutputStream;
 
 public class Conf {
-    static int c_N=100;// the number of customers
-    static int q_N=25;// the number of recharge station
+    static int c_N = 100;// the number of customers
+    static int q_N = 25;// the number of recharge station
     static double dis_m[][];// cost_m
     static double Q;// Vehicle fuel tank capacity
     static double C;// Vehicle load capacity
@@ -17,16 +18,20 @@ public class Conf {
     static ArrayList<Route> route_pool = new ArrayList(); // 路径池
     static ArrayList<Route> ppa_route_pool = new ArrayList<>(); // 部分路程池
     static ArrayList<RouteCustomer> ppa = new ArrayList<>();
-    static Customer customers[] = new Customer[c_N+1+q_N];
-    static Customer new_customers[] = new Customer[c_N+1+q_N];
-    static Customer []result_customers;
+    static Customer customers[] = new Customer[c_N + 1 + q_N];
+    static Customer new_customers[] = new Customer[c_N + 1 + q_N];
+    static Customer[] result_customers;
 
     static Customer chargestations[] = new Customer[q_N];
     static Q_best q_bests[];
-    double []select = new double[5];
-    double []particle = new double[5];
-    static void input(String file_name) throws FileNotFoundException
-    {
+    double[] select = new double[5];
+    double[] particle = new double[5];
+    static double alns_time;
+    static double PFA_time;
+    static double PPFA_time;
+    static double APPFA_time;
+
+    static void input(String file_name) throws FileNotFoundException {
         String ID;
         String Type;
         double x;
@@ -39,11 +44,11 @@ public class Conf {
         File file = new File(file_name);
         Scanner cin = new Scanner(file);
         cin.nextLine();
-        int i=0;
-        int j=0;
-        while(cin.hasNext()) {
+        int i = 0;
+        int j = 0;
+        while (cin.hasNext()) {
             ID = cin.next();
-            if(ID.equals("END"))
+            if (ID.equals("END"))
                 break;
             Type = cin.next();
             x = cin.nextDouble();
@@ -53,12 +58,12 @@ public class Conf {
             d_time = cin.nextDouble();
             s_time = cin.nextDouble();
             if (Type.equals("f")) {
-                chargestations[j] = new Customer(j,Type,ID, x, y, r_time, s_time, d_time, demand);
+                chargestations[j] = new Customer(j, Type, ID, x, y, r_time, s_time, d_time, demand);
                 customers[i] = chargestations[j];
                 i++;
                 j++;
             } else {
-                customers[i] = new Customer(i,Type, ID ,  x, y, r_time, s_time, d_time, demand);
+                customers[i] = new Customer(i, Type, ID, x, y, r_time, s_time, d_time, demand);
                 i++;
             }
         }
@@ -70,88 +75,100 @@ public class Conf {
         q_N = j;// update the numbers of customers and q;
         c_N = i;
     }
+
     static void initialize()//get the q_best and the cost_m
     {
-        for(int i=0;i< Conf.c_N;i++)
-        {
+        for (int i = 0; i < Conf.c_N; i++) {
             customers[i].num = i;
         }
         dis_m = new double[c_N][c_N];
-        for(int i=0;i<c_N;i++)
-        {
-            for(int j=0;j<c_N;j++)
-            {
+        for (int i = 0; i < c_N; i++) {
+            for (int j = 0; j < c_N; j++) {
                 dis_m[i][j] = customers[i].get_distance(customers[j]);
             }
         }
         q_bests = new Q_best[c_N];
-        for(int i=0;i<c_N;i++)
-        {
+        for (int i = 0; i < c_N; i++) {
             double dis = 100000;
             int id = 0;
-            for(int j=0;j<q_N;j++)
-            {
-                if(dis > customers[i].get_distance(chargestations[j]))
-                {
+            for (int j = 0; j < q_N; j++) {
+                if (dis > customers[i].get_distance(chargestations[j])) {
                     dis = customers[i].get_distance(chargestations[j]);
                     id = j;
                 }
-                q_bests[i] = new Q_best(id,dis);
+                q_bests[i] = new Q_best(id, dis);
             }
 
         }
     }
-    public static void main(String args[])
-    {
 
+    public static void main(String args[]) {
+        output();
+
+    }
+
+    static void output() {
         try {
-            //String path = "result.txt";
-            //FileOutputStream puts = new FileOutputStream(path,true);
-            //PrintStream out = new PrintStream(puts);
-           // System.setOut(out);
-            File file = new File("evrptw_instances");
-            File[] templist = file.listFiles();
+            int p  = Parameter.CUS;
+            String path = "result.txt";
+            FileOutputStream puts = new FileOutputStream(path, true);
+            PrintStream out = new PrintStream(puts);
+            System.setOut(out);
+            File[] templist;
+            if(Parameter.file_name.equals("all")) {
+                File file = new File("evrptw_instances");
+
+             templist = file.listFiles();
+            }
+            else
+            {
+                templist = new File[1];
+                templist[0] = new File("evrptw_instances"+"/"+Parameter.file_name);
+            }
             for (int i = 0; i < templist.length; i++) {
                 System.out.println(templist[i].toString());
                 input(templist[i].toString());
 
                 Algorithm al = new Algorithm();
-
                 Customer[] target_customers = new Customer[Conf.c_N + 1];
-                for (int p = 20; p <= 70; p += 10) {
-                    System.out.println("服务顾客数"+p);
-                    int t = 10;
-                    al.generate_new_customers(target_customers, p);
-                    Conf.customers = target_customers;
-                    Conf.result_customers = target_customers;
-                    Conf.c_N = Conf.q_N + p + 1;
-                    long s_time = System.currentTimeMillis();
-                    Solution solution = al.get_result_solution(10000);
-                    long t_time = System.currentTimeMillis();
-                    System.out.println("ALNS时间" + (t_time - s_time) / 1000);
-                    System.out.println(solution.dis);
-                    Conf.c_N = 122;
-                    Conf.customers = Conf.new_customers;
-                    Solution solution1 = al.PFA(t, p);
-                    System.out.println(solution1.get_dis());
-                    Conf.c_N = 122;
-                    Conf.customers = Conf.new_customers;
-                    Solution solution2 = al.PPFA(p);
-                    System.out.println(solution2.get_dis());
-                    Conf.c_N = 122;
-                    Conf.customers = Conf.new_customers;
-                    Solution solution3 = al.APPFA(p);
-                    System.out.println(solution3.get_dis());
-                    Conf.c_N = 122;
-                    Conf.customers = Conf.new_customers;
-                }
-            }
-        }
+                System.out.println("服务顾客数" + p);
+                int t = 10;
+                al.generate_new_customers(target_customers, p);
+                Conf.customers = target_customers;
+                Conf.result_customers = target_customers;
+                Conf.c_N = Conf.q_N + p + 1;
+                long s_time = System.currentTimeMillis();
+                Solution solution = al.get_result_solution(Parameter.iterations);
+                long t_time = System.currentTimeMillis();
+                System.out.println("ALNS时间" + (t_time - s_time) / 1000.0);
+                Conf.alns_time = (t_time-s_time)/1000.0;
+                System.out.println(solution.dis);
+                double dis = solution.dis;
+                Conf.c_N = 122;
+                Conf.customers = Conf.new_customers;
+                Solution solution1 = al.PFA(t, p);
+                System.out.println(solution1.get_dis());
+                System.out.println("PFA相对ALNS dis变化为: "+(solution1.get_dis()-dis)/dis*100+"%");
+                System.out.println("PFA相对ALNS time变化为: "+(double)((Conf.PFA_time-Conf.alns_time)/Conf.alns_time)*100+"%");
+                Conf.c_N = 122;
+                Conf.customers = Conf.new_customers;
+                Solution solution2 = al.PPFA(p);
+                System.out.println(solution2.get_dis());
+                System.out.println("PPFA相对ALNS dis变化为: "+(solution2.get_dis()-dis)/dis*100+"%");
+                System.out.println("PPFA相对ALNS time变化为: "+(double)((Conf.PPFA_time-Conf.alns_time)/Conf.alns_time)*100+"%");
+                Conf.c_N = 122;
+                Conf.customers = Conf.new_customers;
+                Solution solution3 = al.APPFA(p);
+                System.out.println(solution3.get_dis());
+                Conf.c_N = 122;
+                System.out.println("APPFA相对ALNS dis变化为: "+(solution3.get_dis()-dis)/dis*100+"%");
+                System.out.println("APPFA相对ALNS time变化为: "+(double)((Conf.APPFA_time-Conf.alns_time)/Conf.alns_time)*100+"%");
+                Conf.customers = Conf.new_customers;
 
-        catch(IOException e)
-            {
-                e.printStackTrace();
             }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
 class Customer implements Comparable<Customer>// the Customers
@@ -784,7 +801,7 @@ class Algorithm {
     }
 
     Solution random_remove_customers(Solution solution) {
-        int p = 10;
+        int p = Parameter.CUS/5;
         while (solution.relaxed_clist.size() != p) {
             int i = get_random_int(0, solution.unrelaxed_clist.size());
             solution.relaxed_clist.add(solution.unrelaxed_clist.get(i));
@@ -862,15 +879,14 @@ class Algorithm {
         Customer[] target_customers = new Customer[Conf.c_N + 1];
         Boolean[] sign = new Boolean[Conf.c_N+1];
         int t = Conf.c_N;
-        for(int i=1;i<=h;i++) {
+        for(int i=1;i<=Parameter.efforts_iterations;i++) {
             generate_new_customers(target_customers, 50);
             get_route_pool(target_customers,50,t);
         }
         generate_new_customers(target_customers,p);
         Conf.customers = Conf.result_customers;
         Conf.c_N = Conf.q_N+p+1;
-
-
+        Route [] routes = new Route[Parameter.route_pool_number];
         ArrayList end_customers = new ArrayList();
         Solution solution = new Solution();
         for(RouteCustomer r: Conf.ppa) {
@@ -893,7 +909,8 @@ class Algorithm {
         solution = get_result_solution(7500);
         long endTime   = System.currentTimeMillis();
         long TotalTime = endTime - startTime;
-        System.out.println("PFA用时："+TotalTime/1000);
+        Conf.PFA_time = TotalTime/1000.0;
+        System.out.println("PFA用时："+TotalTime/1000.0);
         return solution;
     }
     Solution PPFA(int p)
@@ -920,12 +937,13 @@ class Algorithm {
 
             }
         }
-        int k = 1000;
+        int k = Parameter.efforts_iterations;
         long startTime = System.currentTimeMillis();
-        solution = get_result_solution(1500);
+        solution = get_result_solution(1500+k);
         long endTime   = System.currentTimeMillis();
         long TotalTime = endTime - startTime;
-        System.out.println("PPFA用时："+TotalTime/1000);
+        System.out.println("PPFA用时："+TotalTime/1000.0);
+        Conf.PPFA_time = TotalTime/1000.0;
         return solution;
     }
     Solution APPFA(int p)
@@ -971,6 +989,7 @@ class Algorithm {
 
         }
         ArrayList end_customers = new ArrayList();
+        int k = Parameter.efforts_iterations;
         Solution solution = new Solution();
         RouteCustomer []rs = new RouteCustomer[Conf.c_N];
         if(t>1) {
@@ -997,10 +1016,11 @@ class Algorithm {
             }
         }
         long startTime = System.currentTimeMillis();
-        solution = get_result_solution(2000);
+        solution = get_result_solution(2000+k);
         long endTime   = System.currentTimeMillis();
         long TotalTime = endTime - startTime;
-        System.out.println("APPFA用时："+TotalTime/1000);
+        System.out.println("APPFA用时："+TotalTime/1000.0);
+        Conf.APPFA_time = TotalTime/1000.0;
         return solution;
 
 
@@ -1098,6 +1118,7 @@ class Algorithm {
         }
         void part_route_by_length(int j) // 按照g拆分
         {
+            j = Parameter.portion_length;
             for (Route r : Conf.route_pool) {
                 RouteCustomer route_customer = new RouteCustomer();
                 Route route = new Route();
